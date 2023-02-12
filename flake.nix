@@ -12,12 +12,17 @@
 
     };
 
+    # TODO: This in a separate file
     nixosConfigurations.container = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
 
       modules = [
-        {
+        ({pkgs, ...}: {
           imports = [ self.nixosModules.nexus ];
+
+          environment.systemPackages = [
+            pkgs.httpie # For testing
+          ];
 
           networking = {
             useDHCP = false;
@@ -30,7 +35,7 @@
           };
 
           boot.isContainer = true;
-        }
+        })
       ];
     };
   };
