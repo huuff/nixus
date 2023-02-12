@@ -155,7 +155,7 @@ in
         };
 
         create-nexus-api-user = {
-          description = "Create a Nexus user that can interact with the API to reconcile state with the NixOS configuration";
+          description = "Nexus API user creation";
 
           wantedBy = [ "multi-user.target" ];
 
@@ -164,25 +164,29 @@ in
 
           path = [ pkgs.httpie ];
 
-          # TODO: Do this with an inline JSON, it's cleaner
+          # TODO: Test
           # TODO: If admin doesn't work (401), skip it
           # TODO: Create a mostly-read-only role for the user
           script = ''
             admin_password=$(cat "${cfg.home}/nexus3/admin.password")
-            echo "The admin password is $admin_password"
-            http -a "admin:$admin_password" --ignore-stdin POST http://localhost:8081/service/rest/v1/security/users \
-              "userId=nix" \
-              "firstName=Nix" \
-              "lastName=User" \
-              "emailAddress=user@nix.com" \
-              "status=active" \
-              "password=$admin_password" \
-              'roles:=[ "nx-anonymous" ]'
+            http -a "admin:$admin_password" POST http://localhost:8081/service/rest/v1/security/users <<EOF
+              {
+                "userId": "nix",
+                "firstName": "Nix",
+                "lastName": "User",
+                "emailAddress": "user@nix.com",
+                "status": "active",
+                "password": "$admin_password",
+                "roles": [
+                  "nx-anonymous"
+                ]
+              }
+            EOF
           '';
 
           serviceConfig = {
             Restart = "on-failure";
-            RestartSec = 5;
+            RestartSec = 15;
             Type = "oneshot";
           };
         };
