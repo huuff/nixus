@@ -167,19 +167,18 @@ in
           # TODO: Test
           # TODO: This does not get restarted when nexus restarts, even though using `partOf`
           # TODO: Create a mostly-read-only role for the user
-          # TODO: Use ${listenPort} instead of inlining the default port!
           script = ''
-            http GET http://localhost:8081/ > /dev/null || { echo "Nexus not started"; exit 1; }
+            http GET http://localhost:${cfg.listenPort}/ > /dev/null || { echo "Nexus not started"; exit 1; }
 
             admin_password=$(cat "${cfg.home}/nexus3/admin.password")
 
             echo "Checking the default admin password"
-            http --check-status -a "admin:$admin_password" GET http://localhost:8081/service/rest/v1/status
+            http --check-status -a "admin:$admin_password" GET http://localhost:${cfg.listenPort}/service/rest/v1/status
             err_code=$?
 
             if [ "$err_code" -ne 3 ]; then
               echo "Creating the API user"
-              http -a "admin:$admin_password" POST http://localhost:8081/service/rest/v1/security/users <<EOF
+              http -a "admin:$admin_password" POST http://localhost:${cfg.listenPort}/service/rest/v1/security/users <<EOF
                 {
                   "userId": "nix",
                   "firstName": "Nix",
