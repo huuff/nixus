@@ -165,23 +165,38 @@ in
           path = [ pkgs.httpie ];
 
           # TODO: Test
-          # TODO: If admin doesn't work (401), skip it
+          # TODO: This does not get restarted when nexus restarts, even though using `partOf`
           # TODO: Create a mostly-read-only role for the user
+          # TODO: Use ${listenPort} instead of inlining the default port!
           script = ''
+            http GET http://localhost:8081/ > /dev/null || { echo "Nexus not started"; exit 1; }
+
             admin_password=$(cat "${cfg.home}/nexus3/admin.password")
-            http -a "admin:$admin_password" POST http://localhost:8081/service/rest/v1/security/users <<EOF
-              {
-                "userId": "nix",
-                "firstName": "Nix",
-                "lastName": "User",
-                "emailAddress": "user@nix.com",
-                "status": "active",
-                "password": "$admin_password",
-                "roles": [
-                  "nx-anonymous"
-                ]
-              }
+
+            echo "Checking the default admin password"
+            http --check-status -a "admin:$admin_password" GET http://localhost:8081/service/rest/v1/status
+            err_code=$?
+
+            if [ "$err_code" -ne 3 ]; then
+              echo "Creating the API user"
+              http -a "admin:$admin_password" POST http://localhost:8081/service/rest/v1/security/users <<EOF
+                {
+                  "userId": "nix",
+                  "firstName": "Nix",
+                  "lastName": "User",
+                  "emailAddress": "user@nix.com",
+                  "status": "active",
+                  "password": "$admin_password",
+                  "roles": [
+                    "nx-anonymous"
+                  ]
+                }
             EOF
+            elif [ "$err_code" -eq 3 ]; then
+              echo "The admin password has changed, so we assume that the API user has been already created"
+            else
+              echo "Some error ocurred when calling the API. Status code: ''${err_code}xx"
+            fi
           '';
 
           serviceConfig = {
