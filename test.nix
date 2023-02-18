@@ -5,7 +5,7 @@ in
   pkgs.nixosTest {
     name = "nixus";
 
-    machine = { pkgs, ... }: {
+    nodes.machine = { pkgs, ... }: {
       imports = [ ./module.nix ];
 
       networking = {
