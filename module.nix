@@ -178,6 +178,7 @@ in
               echo "Creating an API user role"
               http --check-status -a "admin:$admin_password" POST http://localhost:${toString cfg.listenPort}/service/rest/v1/security/roles <<EOF
                 {
+                  "id": "api-user",
                   "name": "api-user",
                   "description": "API user role for the Nexus module",
                   "privileges": [ "nx-repository-admin-*-*-add" ]
