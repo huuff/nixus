@@ -170,13 +170,10 @@ in
           script = ''
             http GET http://localhost:${toString cfg.listenPort}/ > /dev/null || { echo "Nexus not started"; exit 1; }
 
-            admin_password=$(cat "${cfg.home}/nexus3/admin.password")
+            admin_password_location="${cfg.home}/nexus3/admin.password"
 
-            echo "Checking the default admin password"
-            http --check-status -a "admin:$admin_password" GET http://localhost:${toString cfg.listenPort}/service/rest/v1/status
-            err_code=$?
-
-            if [ "$err_code" -ne 3 ]; then
+            if [ -f "$admin_password_location" ]; then
+              admin_password=$(cat "$admin_password_location")
               echo "Creating the API user"
               http -a "admin:$admin_password" POST http://localhost:${toString cfg.listenPort}/service/rest/v1/security/users <<EOF
                 {
@@ -191,10 +188,8 @@ in
                   ]
                 }
             EOF
-            elif [ "$err_code" -eq 3 ]; then
+            else 
               echo "The admin password has changed, so we assume that the API user has been already created"
-            else
-              echo "Some error ocurred when calling the API. Status code: ''${err_code}xx"
             fi
           '';
 
