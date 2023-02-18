@@ -26,7 +26,7 @@ in
       };
     };
     testScript = ''
-        machine.wait_for_unit("nexus.service")
+        machine.wait_for_unit("multi-user.target")
 
         with subtest("main unit is active"):
           machine.succeed("systemctl is-active --quiet nexus")
