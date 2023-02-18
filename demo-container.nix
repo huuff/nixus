@@ -12,6 +12,10 @@
   xservices = {
     nexus = {
       enable = true;
+
+      apiUser = {
+        passwordFile = pkgs.writeText "apiuser.password" "test";
+      };
     };
   };
 

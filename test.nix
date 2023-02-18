@@ -2,6 +2,10 @@
 let
   listenPort = 8081;
   nexusHomeDir = "/var/lib/sonatype-work";
+  apiUser = {
+    password = "apiuserpassword";
+    name = "apiuser";
+  };
 in
   pkgs.nixosTest {
     name = "nixus";
@@ -22,6 +26,11 @@ in
           inherit listenPort; 
 
           enable = true;
+
+          apiUser = {
+            name = apiUser.name;
+            passwordFile = pkgs.writeText "apiuser.password" apiUser.password;
+          };
         };
       };
 
@@ -38,11 +47,9 @@ in
 
         # TODO: wait_for_unit might wait 4ever
         # TODO: use machine.systemctl?
-        # TODO: maybe don't hardcode nix user
         with subtest("creates user"):
           machine.wait_for_unit("create-nexus-api-user")
           machine.succeed("systemctl is-active --quiet create-nexus-api-user")
-          [ _, apiUserPassword ] = machine.execute("cat '${nexusHomeDir}/nexus3/admin.password'")
-          machine.succeed(f"http --check-status -a 'nix:{apiUserPassword}' GET 'http://localhost:${toString listenPort}/service/rest/v1/status/check'")
+          machine.succeed("http --check-status -a '${apiUser.name}:${apiUser.password}' GET 'http://localhost:${toString listenPort}/service/rest/v1/status/check'")
     '';
   }

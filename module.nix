@@ -11,6 +11,7 @@ in
 
   {
     options = {
+      # TODO: Use `with types;` for terseness
       xservices.nexus = {
         enable = mkEnableOption (lib.mdDoc "Sonatype Nexus3 OSS service");
 
@@ -49,6 +50,26 @@ in
           type = types.int;
           default = 8081;
           description = lib.mdDoc "Port to listen on.";
+        };
+
+        apiUser = {
+          name = mkOption {
+            type = types.str;
+            default = "nix";
+            description = lib.mdDoc "Name of the user that will be created to manage Nexus from nix";
+          };
+
+          passwordFile = mkOption {
+            type = types.oneOf [ types.str types.path ];
+            default = null;
+            description = "Path to the file that'll contain the Nix user's password";
+          };
+
+          role = mkOption {
+            type = types.str;
+            default = "nix-api-user";
+            description = "Name of the role that'll be created for the user that'll be used to manage Nexus by nix";
+          };
         };
 
         jvmOpts = mkOption {
@@ -165,9 +186,10 @@ in
           path = [ pkgs.httpie ];
 
           # TODO: Test
-          # TODO: I should save the default "admin.password" since it gets removed! UPDATE: Actually, I should just provide the password in the module as a file
           # TODO: This does not get restarted when nexus restarts, even though using `partOf`
           # TODO: Should check whether the admin user exists before creating it. UPDATE: Actually, checking that the admin password file doesn't exist is not enough. We need to check whether the user actually has access.
+          # MAYBE: I could just set a passwordFile for the admin user
+          # change its password through the API, and use it for anything else?
           script = ''
             http GET http://localhost:${toString cfg.listenPort}/ > /dev/null || { echo "Nexus not started"; exit 1; }
 
@@ -178,8 +200,8 @@ in
               echo "Creating an API user role"
               http --check-status -a "admin:$admin_password" POST http://localhost:${toString cfg.listenPort}/service/rest/v1/security/roles <<EOF
                 {
-                  "id": "api-user",
-                  "name": "api-user",
+                  "id": "${cfg.apiUser.role}",
+                  "name": "${cfg.apiUser.role}",
                   "description": "API user role for the Nexus module",
                   "privileges": [ 
                     "nx-metrics-all",
@@ -190,14 +212,14 @@ in
               echo "Creating the API user"
               http --check-status -a "admin:$admin_password" POST http://localhost:${toString cfg.listenPort}/service/rest/v1/security/users <<EOF
                 {
-                  "userId": "nix",
+                  "userId": "${cfg.apiUser.name}",
                   "firstName": "Nix",
                   "lastName": "User",
                   "emailAddress": "user@nix.com",
                   "status": "active",
-                  "password": "$admin_password",
+                  "password": "$(cat "${toString cfg.apiUser.passwordFile}")",
                   "roles": [
-                    "api-user"
+                    "${cfg.apiUser.role}"
                   ]
                 }
             EOF
