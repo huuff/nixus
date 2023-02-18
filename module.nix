@@ -165,6 +165,7 @@ in
           path = [ pkgs.httpie ];
 
           # TODO: Test
+          # TODO: I should save the default "admin.password" since it gets removed!
           # TODO: This does not get restarted when nexus restarts, even though using `partOf`
           # TODO: Should check whether the admin user exists before creating it
           script = ''
@@ -175,7 +176,7 @@ in
             if [ -f "$admin_password_location" ]; then
               admin_password=$(cat "$admin_password_location")
               echo "Creating an API user role"
-              http -a "admin:$admin_password" POST http://localhost:${toString cfg.listenPort}/service/rest/v1/security/roles <<EOF
+              http --check-status -a "admin:$admin_password" POST http://localhost:${toString cfg.listenPort}/service/rest/v1/security/roles <<EOF
                 {
                   "name": "api-user",
                   "description": "API user role for the Nexus module",
@@ -183,7 +184,7 @@ in
                 }
             EOF
               echo "Creating the API user"
-              http -a "admin:$admin_password" POST http://localhost:${toString cfg.listenPort}/service/rest/v1/security/users <<EOF
+              http --check-status -a "admin:$admin_password" POST http://localhost:${toString cfg.listenPort}/service/rest/v1/security/users <<EOF
                 {
                   "userId": "nix",
                   "firstName": "Nix",
