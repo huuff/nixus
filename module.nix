@@ -166,7 +166,7 @@ in
 
           # TODO: Test
           # TODO: This does not get restarted when nexus restarts, even though using `partOf`
-          # TODO: Create a mostly-read-only role for the user
+          # TODO: Should check whether the admin user exists before creating it
           script = ''
             http GET http://localhost:${toString cfg.listenPort}/ > /dev/null || { echo "Nexus not started"; exit 1; }
 
@@ -174,6 +174,14 @@ in
 
             if [ -f "$admin_password_location" ]; then
               admin_password=$(cat "$admin_password_location")
+              echo "Creating an API user role"
+              http -a "admin:$admin_password" POST http://localhost:${toString cfg.listenPort}/service/rest/v1/security/roles <<EOF
+                {
+                  "name": "api-user",
+                  "description": "API user role for the Nexus module",
+                  "privileges": [ "nx-repository-admin-*-*-add" ]
+                }
+            EOF
               echo "Creating the API user"
               http -a "admin:$admin_password" POST http://localhost:${toString cfg.listenPort}/service/rest/v1/security/users <<EOF
                 {
@@ -184,7 +192,7 @@ in
                   "status": "active",
                   "password": "$admin_password",
                   "roles": [
-                    "nx-anonymous"
+                    "api-user"
                   ]
                 }
             EOF
