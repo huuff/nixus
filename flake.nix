@@ -6,6 +6,10 @@
   };
 
   outputs = { self, nixpkgs }:
+  let
+    system = "x86_64-linux";
+    pkgs = import nixpkgs { inherit system; };
+  in
   {
     nixosModules = {
       nexus = import ./module.nix;
@@ -13,12 +17,16 @@
     };
 
     nixosConfigurations.container = nixpkgs.lib.nixosSystem {
-      system = "x86_64-linux";
+      inherit system;
 
       modules = [ 
         { imports = [ self.nixosModules.nexus ]; }
         (import ./demo-container.nix) 
       ];
+    };
+
+    checks.${system} = {
+      nixus = import ./test.nix { inherit pkgs; };
     };
   };
 }
