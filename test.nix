@@ -43,6 +43,6 @@ in
           machine.wait_for_unit("create-nexus-api-user")
           machine.succeed("systemctl is-active --quiet create-nexus-api-user")
           [ _, apiUserPassword ] = machine.execute("cat '${nexusHomeDir}/nexus3/admin.password'")
-          machine.succeed(f"http --check-status -a 'nix:{apiUserPassword}' GET 'http://localhost:${toString listenPort}/service/rest/v1/status'")
+          machine.succeed(f"http --check-status -a 'nix:{apiUserPassword}' GET 'http://localhost:${toString listenPort}/service/rest/v1/status/check'")
     '';
   }
