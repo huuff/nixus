@@ -167,7 +167,7 @@ in
           # TODO: Test
           # TODO: I should save the default "admin.password" since it gets removed! UPDATE: Actually, I should just provide the password in the module as a file
           # TODO: This does not get restarted when nexus restarts, even though using `partOf`
-          # TODO: Should check whether the admin user exists before creating it
+          # TODO: Should check whether the admin user exists before creating it. UPDATE: Actually, checking that the admin password file doesn't exist is not enough. We need to check whether the user actually has access.
           script = ''
             http GET http://localhost:${toString cfg.listenPort}/ > /dev/null || { echo "Nexus not started"; exit 1; }
 
