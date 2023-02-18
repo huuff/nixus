@@ -191,11 +191,20 @@ in
           # MAYBE: I could just set a passwordFile for the admin user
           # change its password through the API, and use it for anything else?
           script = ''
+            set +e
+
             http GET http://localhost:${toString cfg.listenPort}/ > /dev/null || { echo "Nexus not started"; exit 1; }
 
-            admin_password_location="${cfg.home}/nexus3/admin.password"
 
-            if [ -f "$admin_password_location" ]; then
+            user="${cfg.apiUser.name}"
+            password="$(cat "${toString cfg.apiUser.passwordFile}")"
+
+            http --check-status -a "$user:$password" GET http://localhost:${toString cfg.listenPort}/service/rest/v1/status/check
+
+            error_code="$?"
+
+            if [ "$error_code" -eq 4 ]; then
+              admin_password_location="${cfg.home}/nexus3/admin.password"
               admin_password=$(cat "$admin_password_location")
               echo "Creating an API user role"
               http --check-status -a "admin:$admin_password" POST http://localhost:${toString cfg.listenPort}/service/rest/v1/security/roles <<EOF
@@ -212,19 +221,21 @@ in
               echo "Creating the API user"
               http --check-status -a "admin:$admin_password" POST http://localhost:${toString cfg.listenPort}/service/rest/v1/security/users <<EOF
                 {
-                  "userId": "${cfg.apiUser.name}",
+                  "userId": "$user",
                   "firstName": "Nix",
                   "lastName": "User",
                   "emailAddress": "user@nix.com",
                   "status": "active",
-                  "password": "$(cat "${toString cfg.apiUser.passwordFile}")",
+                  "password": "$password",
                   "roles": [
                     "${cfg.apiUser.role}"
                   ]
                 }
             EOF
-            else 
-              echo "The admin password has changed, so we assume that the API user has been already created"
+            elif [ "$error_code" -eq 0 ]; then
+              echo "The API user has already been created. Skipping unit."
+            else
+              echo "Some unknown error happened while calling the Nexus' API: ''${error_code}xx"
             fi
           '';
 
