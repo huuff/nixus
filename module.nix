@@ -205,6 +205,7 @@ in
             Restart = "on-failure";
             RestartSec = 15;
             Type = "oneshot";
+            RemainAfterExit = true;
           };
         };
       };
