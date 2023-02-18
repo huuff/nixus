@@ -165,9 +165,10 @@ in
           path = [ pkgs.httpie ];
 
           # TODO: Test
-          # TODO: I should save the default "admin.password" since it gets removed!
+          # TODO: I should save the default "admin.password" since it gets removed! UPDATE: Actually, I should just provide the password in the module
           # TODO: This does not get restarted when nexus restarts, even though using `partOf`
           # TODO: Should check whether the admin user exists before creating it
+          # TODO: Discover what nx-healthcheck-read is for
           script = ''
             http GET http://localhost:${toString cfg.listenPort}/ > /dev/null || { echo "Nexus not started"; exit 1; }
 
@@ -181,7 +182,11 @@ in
                   "id": "api-user",
                   "name": "api-user",
                   "description": "API user role for the Nexus module",
-                  "privileges": [ "nx-repository-admin-*-*-add" ]
+                  "privileges": [ 
+                    "nx-healthcheck-read",
+                    "nx-healthcheck-summary-read",
+                    "nx-repository-admin-*-*-add"
+                  ]
                 }
             EOF
               echo "Creating the API user"

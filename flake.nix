@@ -11,6 +11,7 @@
     pkgs = import nixpkgs { inherit system; };
   in
   {
+    # TODO: Add "deault" pointing to "nix"
     nixosModules = {
       nexus = import ./module.nix;
 
