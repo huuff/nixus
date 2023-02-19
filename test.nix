@@ -43,20 +43,19 @@ in
         machine.wait_for_unit("multi-user.target")
 
         with subtest("main unit is active"):
-          machine.succeed("systemctl is-active --quiet nexus")
+          machine.systemctl("is-active nexus")
 
         # TODO: wait_for_unit might wait 4ever
-        # TODO: use machine.systemctl?
         with subtest("creates user"):
           machine.wait_for_unit("create-nexus-api-user")
-          machine.succeed("systemctl is-active --quiet create-nexus-api-user")
+          machine.systemctl("is-active create-nexus-api-user")
           machine.succeed("http --check-status -a '${apiUser.name}:${apiUser.password}' GET 'http://localhost:${toString listenPort}/service/rest/v1/status/check'")
 
           # TODO: Check whether output contains text saying user already exists?
         with subtest("create user is idempotent (exits successfully if user already exists)"):
           machine.systemctl("restart create-nexus-api-user")
           machine.wait_for_unit("create-nexus-api-user")
-          machine.succeed("systemctl is-active --quiet create-nexus-api-user")
+          machine.systemctl("is-active create-nexus-api-user")
           
     '';
   }
