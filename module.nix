@@ -185,18 +185,17 @@ in
 
           path = [ pkgs.httpie ];
 
-          # TODO: Test
           # TODO: This does not get restarted when nexus restarts, even though using `partOf`
           script = ''
             set +e
 
-            http GET http://localhost:${toString cfg.listenPort}/ > /dev/null || { echo "Nexus not started"; exit 1; }
+            http --quiet GET http://localhost:${toString cfg.listenPort}/ > /dev/null || { echo "Nexus not started"; exit 1; }
 
 
             user="${cfg.apiUser.name}"
             password="$(cat "${toString cfg.apiUser.passwordFile}")"
 
-            http --check-status -a "$user:$password" GET http://localhost:${toString cfg.listenPort}/service/rest/v1/status/check
+            http --quiet --check-status --auth "$user:$password" GET http://localhost:${toString cfg.listenPort}/service/rest/v1/status/check
 
             error_code="$?"
 
@@ -206,7 +205,7 @@ in
               admin_password_location="${cfg.home}/nexus3/admin.password"
               admin_password=$(cat "$admin_password_location")
               echo "Creating an API user role"
-              http --check-status -a "admin:$admin_password" POST http://localhost:${toString cfg.listenPort}/service/rest/v1/security/roles <<EOF
+              http --quiet --check-status --auth "admin:$admin_password" POST http://localhost:${toString cfg.listenPort}/service/rest/v1/security/roles <<EOF
                 {
                   "id": "${cfg.apiUser.role}",
                   "name": "${cfg.apiUser.role}",
@@ -218,7 +217,7 @@ in
                 }
             EOF
               echo "Creating the API user"
-              http --check-status -a "admin:$admin_password" POST http://localhost:${toString cfg.listenPort}/service/rest/v1/security/users <<EOF
+              http --quiet --check-status --auth "admin:$admin_password" POST http://localhost:${toString cfg.listenPort}/service/rest/v1/security/users <<EOF
                 {
                   "userId": "$user",
                   "firstName": "Nix",
