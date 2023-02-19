@@ -189,7 +189,6 @@ in
 
           path = [ pkgs.httpie ];
 
-          # TODO: This does not get restarted when nexus restarts, even though using `partOf`
           script = 
           let
             baseUrl = "http://localhost:${toString cfg.listenPort}";
