@@ -11,10 +11,9 @@
     pkgs = import nixpkgs { inherit system; };
   in
   {
-    # TODO: Add "deault" pointing to "nix"
     nixosModules = {
       nexus = import ./module.nix;
-
+      default = self.nixosModules.nexus;
     };
 
     nixosConfigurations.container = nixpkgs.lib.nixosSystem {
