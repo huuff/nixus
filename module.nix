@@ -11,69 +11,69 @@ in
 
   {
     options = {
-      # TODO: Use `with types;` for terseness
-      xservices.nexus = {
+      xservices.nexus = with types; {
         enable = mkEnableOption (lib.mdDoc "Sonatype Nexus3 OSS service");
 
         package = mkOption {
-          type = types.package;
+          type = package;
           default = pkgs.nexus;
           defaultText = literalExpression "pkgs.nexus";
-          description = lib.mdDoc "Package which runs Nexus3";
+          description = mdDoc "Package which runs Nexus3";
         };
 
         user = mkOption {
-          type = types.str;
+          type = str;
           default = "nexus";
-          description = lib.mdDoc "User which runs Nexus3.";
+          description = mdDoc "User which runs Nexus3.";
         };
 
         group = mkOption {
-          type = types.str;
+          type = str;
           default = "nexus";
-          description = lib.mdDoc "Group which runs Nexus3.";
+          description = mdDoc "Group which runs Nexus3.";
         };
 
         home = mkOption {
-          type = types.str;
+          type = str;
           default = "/var/lib/sonatype-work";
-          description = lib.mdDoc "Home directory of the Nexus3 instance.";
+          description = mdDoc "Home directory of the Nexus3 instance.";
         };
 
         listenAddress = mkOption {
-          type = types.str;
+          type = str;
           default = "0.0.0.0";
           description = lib.mdDoc "Address to listen on.";
         };
 
         listenPort = mkOption {
-          type = types.int;
+          type = int;
           default = 8081;
-          description = lib.mdDoc "Port to listen on.";
+          description = mdDoc "Port to listen on.";
         };
 
         apiUser = {
           name = mkOption {
-            type = types.str;
+            type = str;
             default = "nix";
-            description = lib.mdDoc "Name of the user that will be created to manage Nexus from nix";
+            description = mdDoc "Name of the user that will be created to manage Nexus from nix";
           };
 
+          # TODO: Randomly create one if it doesn't exist?
           passwordFile = mkOption {
-            type = types.oneOf [ types.str types.path ];
+            type = oneOf [ str path ];
             default = null;
             description = "Path to the file that'll contain the Nix user's password";
           };
 
           role = mkOption {
-            type = types.str;
+            type = str;
             default = "nix-api-user";
             description = "Name of the role that'll be created for the user that'll be used to manage Nexus by nix";
           };
         };
 
         jvmOpts = mkOption {
-          type = types.lines;
+          type = lines;
           default = ''
             -Xms1200M
             -Xmx1200M
@@ -115,7 +115,7 @@ in
             '''
           '';
 
-          description = lib.mdDoc ''
+          description = mdDoc ''
             Options for the JVM written to `nexus.jvmopts`.
             Please refer to the docs (https://help.sonatype.com/repomanager3/installation/configuring-the-runtime-environment)
             for further information.
