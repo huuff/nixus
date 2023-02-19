@@ -190,10 +190,14 @@ in
           path = [ pkgs.httpie ];
 
           # TODO: This does not get restarted when nexus restarts, even though using `partOf`
-          script = ''
+          script = 
+          let
+            baseUrl = "http://localhost:${toString cfg.listenPort}";
+          in
+          ''
             set +e
 
-            http --quiet GET http://localhost:${toString cfg.listenPort}/ > /dev/null || { echo "Nexus not started"; exit 1; }
+            http --quiet "${baseUrl}" > /dev/null || { echo "Nexus not started"; exit 1; }
 
 
             user="${cfg.apiUser.name}"
@@ -202,7 +206,7 @@ in
             http --quiet \
                  --check-status \
                  --auth "$user:$password" \
-                 GET http://localhost:${toString cfg.listenPort}/service/rest/v1/status/check
+                 GET ${baseUrl}/service/rest/v1/status/check
 
             error_code="$?"
 
@@ -215,7 +219,7 @@ in
               http --quiet \
                    --check-status \
                    --auth "admin:$admin_password" \
-                   POST http://localhost:${toString cfg.listenPort}/service/rest/v1/security/roles <<EOF
+                   POST ${baseUrl}/service/rest/v1/security/roles <<EOF
                 {
                   "id": "${cfg.apiUser.role}",
                   "name": "${cfg.apiUser.role}",
@@ -230,7 +234,7 @@ in
               http --quiet \
                    --check-status \
                    --auth "admin:$admin_password" \
-                   POST http://localhost:${toString cfg.listenPort}/service/rest/v1/security/users <<EOF
+                   POST ${baseUrl}/service/rest/v1/security/users <<EOF
                 {
                   "userId": "$user",
                   "firstName": "Nix",
