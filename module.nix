@@ -4,9 +4,71 @@
 with lib;
 
 let
-
   cfg = config.xservices.nexus;
+  hostedStorageAttributesModule = with types; submodule {
+    options = {
+      blobStoreName = mkOption {
+        type = str;
+        default = "default";
+        description = "Blob store used to store repository contents";
+      };
 
+      strictContentTypeValidation = mkOption {
+        type = bool;
+        default = true;
+        description = "Whether to validate uploaded content's MIME type appropriate for the repository format";
+      };
+
+      writePolicy = mkOption {
+        type = enum [ "ALLOW" "ALLOW_ONCE" "DENY" ];
+        default = "ALLOw";
+        description = "Controls if deployments of and updates to assets are allowed";
+      };
+    };
+  };
+  mavenHostedRepositoryModule = with types; submodule {
+    options = {
+      name = mkOption {
+        type = str;
+        description = "A unique identifier for this repository";
+      };
+
+      online = mkOption {
+        type = bool;
+        default = true;
+        description = "Whether this repository accepts incoming requests";
+      };
+
+      storage = mkOption {
+        type = hostedStorageAttributesModule;
+      };
+
+      maven = mkOption {
+        type = submodule {
+          options = {
+            contentDisposition = {
+              type = enum [ "INLINE" "ATTACHMENT" ];
+              description = "Content Disposition";
+              default = "INLINE";
+            };
+
+            versionPolicy = {
+              type = enum [ "RELEASE" "SNAPSHOT" "MIXED"];
+              description = "What type of artifacts does this repository store?";
+              default = "MIXED";
+            };
+
+            layoutPolicy = {
+              type = enum [ "STRICT" "PERMISSIVE" ];
+              description = "Validate that all paths are maven artifact or metadata paths";
+              default = "STRICT";
+            };
+          };
+        };
+        default = {};
+      };
+    };
+  };
 in
 
   {
@@ -69,6 +131,13 @@ in
             type = str;
             default = "nix-api-user";
             description = "Name of the role that'll be created for the user that'll be used to manage Nexus by nix";
+          };
+        };
+
+        hostedRepositories = {
+          maven = mkOption {
+            type = listOf mavenHostedRepositoryModule;
+            default = [];
           };
         };
 
