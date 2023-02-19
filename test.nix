@@ -49,11 +49,11 @@ in
           machine.wait_until_succeeds("systemctl is-active create-nexus-api-user", 300)
           machine.succeed("http --check-status -a '${apiUser.name}:${apiUser.password}' GET 'http://localhost:${toString listenPort}/service/rest/v1/status/check'")
 
-          # TODO: Check whether output contains text saying user already exists?
         with subtest("create user is idempotent (exits successfully if user already exists)"):
           machine.systemctl("restart create-nexus-api-user")
           machine.wait_until_succeeds("systemctl is-active create-nexus-api-user", 15)
-          machine.systemctl("is-active create-nexus-api-user")
+          [ _, out ] = machine.execute("journalctl -u create-nexus-api-user")
+          assert "The API user has already been created" in out
           
     '';
   }
