@@ -3,6 +3,7 @@
 
 with lib;
 
+# TODO: Maybe setting up admin's password?
 let
   cfg = config.xservices.nexus;
   hostedStorageAttributesModule = with types; submodule {
@@ -21,7 +22,7 @@ let
 
       writePolicy = mkOption {
         type = enum [ "ALLOW" "ALLOW_ONCE" "DENY" ];
-        default = "ALLOw";
+        default = "ALLOW";
         description = "Controls if deployments of and updates to assets are allowed";
       };
     };
@@ -41,24 +42,25 @@ let
 
       storage = mkOption {
         type = hostedStorageAttributesModule;
+        default = {};
       };
 
       maven = mkOption {
         type = submodule {
           options = {
-            contentDisposition = {
+            contentDisposition = mkOption {
               type = enum [ "INLINE" "ATTACHMENT" ];
               description = "Content Disposition";
               default = "INLINE";
             };
 
-            versionPolicy = {
+            versionPolicy = mkOption {
               type = enum [ "RELEASE" "SNAPSHOT" "MIXED"];
               description = "What type of artifacts does this repository store?";
               default = "MIXED";
             };
 
-            layoutPolicy = {
+            layoutPolicy = mkOption {
               type = enum [ "STRICT" "PERMISSIVE" ];
               description = "Validate that all paths are maven artifact or metadata paths";
               default = "STRICT";
@@ -320,6 +322,70 @@ in
             else
               echo "Some unknown error happened while calling the Nexus' API: ''${error_code}xx"
             fi
+          '';
+
+          serviceConfig = {
+            Restart = "on-failure";
+            RestartSec = 15;
+            Type = "oneshot";
+            RemainAfterExit = true;
+          };
+        };
+
+        configure-maven-repositories = {
+          description = "Configure Maven repositories";
+
+          wantedBy = [ "multi-user.target"];
+          requires = [ "create-nexus-api-user.service"];
+          after = [ "create-nexus-api-user.service"];
+
+          path = [ pkgs.httpie ];
+
+          # TODO: Test
+          # TODO: This should get activated when create-nexus-api-user gets activated, but currently it fails (I'm starting it manually in the demo container)
+          # TODO: Also updating repositories if they already exist
+          script = 
+          let
+            # TODO: Merge this and the create-nexus-api-user one into a single one, and put it the config (also add /service/rest to the path?)
+            baseUrl = "http://localhost:${toString cfg.listenPort}";
+          in
+          ''
+            set +e
+
+            user="${cfg.apiUser.name}"
+            password="$(cat "${toString cfg.apiUser.passwordFile}")"
+
+            ${concatMapStringsSep "\n" (module: ''
+              http --check-status \
+                   --quiet \
+                   --auth "$user:$password" \
+                   GET "${baseUrl}/service/rest/v1/repositories/maven/hosted/${module.name}"
+
+              return_code="$?"
+
+              if [ "$return_code" -eq 4 ]; then
+                http --check-status \
+                     --auth "$user:$password" \
+                     POST "${baseUrl}/service/rest/v1/repositories/maven/hosted/" <<EOF
+                {
+                  "name": "${module.name}",
+                  "online": ${toString module.online},
+                  "storage": {
+                    "blobStoreName": "${module.storage.blobStoreName}",
+                    "writePolicy": "${module.storage.writePolicy}",
+                    "strictContentTypeValidation": ${toString module.storage.strictContentTypeValidation}
+                  },
+                  "maven": {
+                    "contentDisposition": "${module.maven.contentDisposition}",
+                    "versionPolicy": "${module.maven.versionPolicy}",
+                    "layoutPolicy": "${module.maven.layoutPolicy}"
+                  }
+                }
+              EOF
+              else
+                echo "Repository ${module.name} already exists, skipping unit"
+              fi
+            '') cfg.hostedRepositories.maven}
           '';
 
           serviceConfig = {

@@ -16,6 +16,14 @@
       apiUser = {
         passwordFile = pkgs.writeText "apiuser.password" "test";
       };
+
+      hostedRepositories = {
+        maven = [
+            {
+              name = "maven";
+            }
+        ];
+      };
     };
   };
 
