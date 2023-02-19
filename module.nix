@@ -177,6 +177,8 @@ in
 
         # TODO: XXX: This might have a problem... what if the passwordFile changes?
         # It will try to use the new password and just fail
+        # Maybe I could copy the password when the user is created
+        # somewhere else and check whether it changed on next runs?
         create-nexus-api-user = {
           description = "Nexus API user creation";
 
