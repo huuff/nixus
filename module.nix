@@ -175,6 +175,8 @@ in
           };
         };
 
+        # TODO: XXX: This might have a problem... what if the passwordFile changes?
+        # It will try to use the new password and just fail
         create-nexus-api-user = {
           description = "Nexus API user creation";
 
@@ -195,7 +197,10 @@ in
             user="${cfg.apiUser.name}"
             password="$(cat "${toString cfg.apiUser.passwordFile}")"
 
-            http --quiet --check-status --auth "$user:$password" GET http://localhost:${toString cfg.listenPort}/service/rest/v1/status/check
+            http --quiet \
+                 --check-status \
+                 --auth "$user:$password" \
+                 GET http://localhost:${toString cfg.listenPort}/service/rest/v1/status/check
 
             error_code="$?"
 
@@ -205,7 +210,10 @@ in
               admin_password_location="${cfg.home}/nexus3/admin.password"
               admin_password=$(cat "$admin_password_location")
               echo "Creating an API user role"
-              http --quiet --check-status --auth "admin:$admin_password" POST http://localhost:${toString cfg.listenPort}/service/rest/v1/security/roles <<EOF
+              http --quiet \
+                   --check-status \
+                   --auth "admin:$admin_password" \
+                   POST http://localhost:${toString cfg.listenPort}/service/rest/v1/security/roles <<EOF
                 {
                   "id": "${cfg.apiUser.role}",
                   "name": "${cfg.apiUser.role}",
@@ -217,7 +225,10 @@ in
                 }
             EOF
               echo "Creating the API user"
-              http --quiet --check-status --auth "admin:$admin_password" POST http://localhost:${toString cfg.listenPort}/service/rest/v1/security/users <<EOF
+              http --quiet \
+                   --check-status \
+                   --auth "admin:$admin_password" \
+                   POST http://localhost:${toString cfg.listenPort}/service/rest/v1/security/users <<EOF
                 {
                   "userId": "$user",
                   "firstName": "Nix",
