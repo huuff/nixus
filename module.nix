@@ -187,9 +187,6 @@ in
 
           # TODO: Test
           # TODO: This does not get restarted when nexus restarts, even though using `partOf`
-          # TODO: Should check whether the admin user exists before creating it. UPDATE: Actually, checking that the admin password file doesn't exist is not enough. We need to check whether the user actually has access.
-          # MAYBE: I could just set a passwordFile for the admin user
-          # change its password through the API, and use it for anything else?
           script = ''
             set +e
 
@@ -202,6 +199,8 @@ in
             http --check-status -a "$user:$password" GET http://localhost:${toString cfg.listenPort}/service/rest/v1/status/check
 
             error_code="$?"
+
+            set -e
 
             if [ "$error_code" -eq 4 ]; then
               admin_password_location="${cfg.home}/nexus3/admin.password"
