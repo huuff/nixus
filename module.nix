@@ -282,6 +282,59 @@ in
           };
         };
 
+        # TODO: Actually, create roles from modules, and add a default one that creates the API user's one.
+        create-nexus-roles = {
+          description = "Nexus roles creation";
+
+          wantedBy = [ "multi-user.target"];
+
+          partOf = [ "nexus.service"];
+          after = [ "nexus.service"];
+
+          path = [ pkgs.httpie ];
+
+          script = ''
+            set +e
+
+            http --quiet --check-status GET "${apiUrl}/status" > /dev/null || { echo "Nexus not started"; exit 1; }
+            
+            if ${bashScripts.apiUserExists}; then
+              user="${cfg.apiUser.name}"
+              password="$(${bashScripts.getApiUserPassword})"
+            elif ${bashScripts.adminStillHasInitialPassword}; then
+              user="admin"
+              password="$(${bashScripts.getInitialAdminPassword})"
+            else
+              echo "Neither API user exists nor admin has initial password. Nexus' installation is in an inconsistent state"
+              exit 1
+            fi
+
+            echo "Creating an API user role"
+            http --quiet \
+                 --check-status \
+                 --auth "$user:$password" \
+                 POST "${apiUrl}/security/roles" <<EOF
+              {
+                "id": "${cfg.apiUser.role}",
+                "name": "${cfg.apiUser.role}",
+                "description": "API user role for the Nexus module",
+                "privileges": [ 
+                  "nx-metrics-all",
+                  "nx-repository-admin-*-*-add"
+                ]
+              }
+            EOF
+
+          '';
+
+          serviceConfig = {
+            Restart = "on-failure";
+            RestartSec = 15;
+            Type = "oneshot";
+            RemainAfterExit = true;
+          };
+        };
+
         # TODO: XXX: This might have a problem... what if the passwordFile changes?
         # It will try to use the new password and just fail
         # Maybe I could copy the password when the user is created
@@ -291,8 +344,8 @@ in
 
           wantedBy = [ "multi-user.target" ];
 
-          partOf = [ "nexus.service" ];
-          after = [ "nexus.service" ];
+          partOf = [ "create-nexus-roles.service" ];
+          after = [ "create-nexus-roles.service" ];
 
           path = [ pkgs.httpie ];
 
@@ -306,21 +359,6 @@ in
 
             if ! ${bashScripts.apiUserExists}; then
               admin_password="$(${bashScripts.getInitialAdminPassword})"
-              echo "Creating an API user role"
-              http --quiet \
-                   --check-status \
-                   --auth "admin:$admin_password" \
-                   POST "${apiUrl}/security/roles" <<EOF
-                {
-                  "id": "${cfg.apiUser.role}",
-                  "name": "${cfg.apiUser.role}",
-                  "description": "API user role for the Nexus module",
-                  "privileges": [ 
-                    "nx-metrics-all",
-                    "nx-repository-admin-*-*-add"
-                  ]
-                }
-            EOF
               echo "Creating the API user"
               http --quiet \
                    --check-status \
