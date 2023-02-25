@@ -45,9 +45,9 @@ let
         type = listOf str;
         description = "The list of privileges assigned to this role";
       };
-      # TODO: Add empty default
       roles = mkOption {
         type = listOf str;
+        default = [];
         description = "The list of roles assigned to this role";
       };
     };
