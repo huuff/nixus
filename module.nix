@@ -195,7 +195,10 @@ in
       };
     };
 
-    config = mkIf cfg.enable {
+    config = 
+      let apiUrl = "http://localhost:${toString cfg.listenPort}/service/rest/v1";
+    in
+    mkIf cfg.enable {
       users.users.${cfg.user} = {
         isSystemUser = true;
         group = cfg.group;
@@ -260,14 +263,10 @@ in
 
           path = [ pkgs.httpie ];
 
-          script = 
-          let
-            baseUrl = "http://localhost:${toString cfg.listenPort}";
-          in
-          ''
+          script = ''
             set +e
 
-            http --quiet "${baseUrl}" > /dev/null || { echo "Nexus not started"; exit 1; }
+            http --quiet "${apiUrl}/stauts" > /dev/null || { echo "Nexus not started"; exit 1; }
 
 
             user="${cfg.apiUser.name}"
@@ -276,7 +275,7 @@ in
             http --quiet \
                  --check-status \
                  --auth "$user:$password" \
-                 GET ${baseUrl}/service/rest/v1/status/check
+                 GET "${apiUrl}/status/check"
 
             error_code="$?"
 
@@ -289,7 +288,7 @@ in
               http --quiet \
                    --check-status \
                    --auth "admin:$admin_password" \
-                   POST ${baseUrl}/service/rest/v1/security/roles <<EOF
+                   POST "${apiUrl}/security/roles" <<EOF
                 {
                   "id": "${cfg.apiUser.role}",
                   "name": "${cfg.apiUser.role}",
@@ -304,7 +303,7 @@ in
               http --quiet \
                    --check-status \
                    --auth "admin:$admin_password" \
-                   POST ${baseUrl}/service/rest/v1/security/users <<EOF
+                   POST "${apiUrl}/security/users" <<EOF
                 {
                   "userId": "$user",
                   "firstName": "Nix",
@@ -345,10 +344,6 @@ in
           # TODO: This should get activated when create-nexus-api-user gets activated, but currently it fails (I'm starting it manually in the demo container)
           # TODO: Also updating repositories if they already exist
           script = 
-          let
-            # TODO: Merge this and the create-nexus-api-user one into a single one, and put it the config (also add /service/rest to the path?)
-            baseUrl = "http://localhost:${toString cfg.listenPort}";
-          in
           ''
             set +e
 
@@ -359,14 +354,14 @@ in
               http --check-status \
                    --quiet \
                    --auth "$user:$password" \
-                   GET "${baseUrl}/service/rest/v1/repositories/maven/hosted/${module.name}"
+                   GET "${apiUrl}/repositories/maven/hosted/${module.name}"
 
               return_code="$?"
 
               if [ "$return_code" -eq 4 ]; then
                 http --check-status \
                      --auth "$user:$password" \
-                     POST "${baseUrl}/service/rest/v1/repositories/maven/hosted/" <<EOF
+                     POST "${apiUrl}/repositories/maven/hosted/" <<EOF
                 {
                   "name": "${module.name}",
                   "online": ${toString module.online},
