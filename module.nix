@@ -258,18 +258,17 @@ in
             VM_OPTS_FILE = pkgs.writeText "nexus.vmoptions" cfg.jvmOpts;
           };
 
-          # TODO: Fix indentation
           preStart = ''
             mkdir -p ${cfg.home}/nexus3/etc
             if [ ! -f ${cfg.home}/nexus3/etc/nexus.properties ]; then
-            echo "# Jetty section" > ${cfg.home}/nexus3/etc/nexus.properties
-            echo "application-port=${toString cfg.listenPort}" >> ${cfg.home}/nexus3/etc/nexus.properties
-            echo "application-host=${toString cfg.listenAddress}" >> ${cfg.home}/nexus3/etc/nexus.properties
+              echo "# Jetty section" > ${cfg.home}/nexus3/etc/nexus.properties
+              echo "application-port=${toString cfg.listenPort}" >> ${cfg.home}/nexus3/etc/nexus.properties
+              echo "application-host=${toString cfg.listenAddress}" >> ${cfg.home}/nexus3/etc/nexus.properties
             else
-            sed 's/^application-port=.*/application-port=${toString cfg.listenPort}/' -i ${cfg.home}/nexus3/etc/nexus.properties
-            sed 's/^# application-port=.*/application-port=${toString cfg.listenPort}/' -i ${cfg.home}/nexus3/etc/nexus.properties
-            sed 's/^application-host=.*/application-host=${toString cfg.listenAddress}/' -i ${cfg.home}/nexus3/etc/nexus.properties
-            sed 's/^# application-host=.*/application-host=${toString cfg.listenAddress}/' -i ${cfg.home}/nexus3/etc/nexus.properties
+              sed 's/^application-port=.*/application-port=${toString cfg.listenPort}/' -i ${cfg.home}/nexus3/etc/nexus.properties
+              sed 's/^# application-port=.*/application-port=${toString cfg.listenPort}/' -i ${cfg.home}/nexus3/etc/nexus.properties
+              sed 's/^application-host=.*/application-host=${toString cfg.listenAddress}/' -i ${cfg.home}/nexus3/etc/nexus.properties
+              sed 's/^# application-host=.*/application-host=${toString cfg.listenAddress}/' -i ${cfg.home}/nexus3/etc/nexus.properties
             fi
           '';
 
@@ -372,35 +371,35 @@ in
           password="$(cat "${toString cfg.apiUser.passwordFile}")"
 
           ${concatMapStringsSep "\n" (module: ''
-                  http --check-status \
-                       --quiet \
-                       --auth "$user:$password" \
-                       GET "${apiUrl}/repositories/maven/hosted/${module.name}"
+              http --check-status \
+                   --quiet \
+                   --auth "$user:$password" \
+                   GET "${apiUrl}/repositories/maven/hosted/${module.name}"
 
-                  return_code="$?"
+              return_code="$?"
 
-                  if [ "$return_code" -eq 4 ]; then
-                  http --check-status \
-                       --auth "$user:$password" \
-                       POST "${apiUrl}/repositories/maven/hosted/" <<EOF
-                    {
-                      "name": "${module.name}",
-                      "online": ${toString module.online},
-                      "storage": {
-                        "blobStoreName": "${module.storage.blobStoreName}",
-                        "writePolicy": "${module.storage.writePolicy}",
-                        "strictContentTypeValidation": ${toString module.storage.strictContentTypeValidation}
-                      },
-                      "maven": {
-                        "contentDisposition": "${module.maven.contentDisposition}",
-                        "versionPolicy": "${module.maven.versionPolicy}",
-                        "layoutPolicy": "${module.maven.layoutPolicy}"
-                      }
-                    }
-                  EOF
-                  else
-                    echo "Repository ${module.name} already exists, skipping unit"
-                  fi
+              if [ "$return_code" -eq 4 ]; then
+              http --check-status \
+                   --auth "$user:$password" \
+                   POST "${apiUrl}/repositories/maven/hosted/" <<EOF
+                {
+                  "name": "${module.name}",
+                  "online": ${toString module.online},
+                  "storage": {
+                    "blobStoreName": "${module.storage.blobStoreName}",
+                    "writePolicy": "${module.storage.writePolicy}",
+                    "strictContentTypeValidation": ${toString module.storage.strictContentTypeValidation}
+                  },
+                  "maven": {
+                    "contentDisposition": "${module.maven.contentDisposition}",
+                    "versionPolicy": "${module.maven.versionPolicy}",
+                    "layoutPolicy": "${module.maven.layoutPolicy}"
+                  }
+                }
+              EOF
+              else
+                echo "Repository ${module.name} already exists, skipping unit"
+              fi
           '') cfg.hostedRepositories.maven}
           '';
 
