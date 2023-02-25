@@ -291,7 +291,7 @@ in
           script = ''
             set +e
 
-            http --quiet "${apiUrl}/stauts" > /dev/null || { echo "Nexus not started"; exit 1; }
+            http --quiet --check-status GET "${apiUrl}/status" > /dev/null || { echo "Nexus not started"; exit 1; }
 
 
             user="${cfg.apiUser.name}"
