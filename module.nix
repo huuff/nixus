@@ -27,6 +27,31 @@ let
       };
     };
   };
+  roleModule = with types; submodule {
+    options = {
+      id = mkOption {
+        type = str;
+        description = "The id of the role";
+      };
+      name = mkOption {
+        type = str;
+        description = "The name of the role";
+      };
+      description = mkOption {
+        type = str;
+        description = "The description of this role";
+      };
+      privileges = mkOption {
+        type = listOf str;
+        description = "The list of privileges assigned to this role";
+      };
+      roles = mkOption {
+        type = listOf str;
+        description = "The list of roles assigned to this role";
+      };
+    };
+  };
+
   mavenHostedRepositoryModule = with types; submodule {
     options = {
       name = mkOption {
@@ -196,7 +221,7 @@ in
     };
 
     config = 
-      let apiUrl = "http://localhost:${toString cfg.listenPort}/service/rest/v1";
+    let apiUrl = "http://localhost:${toString cfg.listenPort}/service/rest/v1";
     in
     mkIf cfg.enable {
       users.users.${cfg.user} = {
@@ -273,9 +298,9 @@ in
             password="$(cat "${toString cfg.apiUser.passwordFile}")"
 
             http --quiet \
-                 --check-status \
-                 --auth "$user:$password" \
-                 GET "${apiUrl}/status/check"
+            --check-status \
+            --auth "$user:$password" \
+            GET "${apiUrl}/status/check"
 
             error_code="$?"
 
@@ -320,7 +345,7 @@ in
               echo "The API user has already been created. Skipping unit."
             else
               echo "Some unknown error happened while calling the Nexus' API: ''${error_code}xx"
-            fi
+                fi
           '';
 
           serviceConfig = {
@@ -345,24 +370,24 @@ in
           # TODO: Also updating repositories if they already exist
           script = 
           ''
-            set +e
+          set +e
 
-            user="${cfg.apiUser.name}"
-            password="$(cat "${toString cfg.apiUser.passwordFile}")"
+          user="${cfg.apiUser.name}"
+          password="$(cat "${toString cfg.apiUser.passwordFile}")"
 
-            ${concatMapStringsSep "\n" (module: ''
-              http --check-status \
+          ${concatMapStringsSep "\n" (module: ''
+                  http --check-status \
                    --quiet \
                    --auth "$user:$password" \
                    GET "${apiUrl}/repositories/maven/hosted/${module.name}"
 
-              return_code="$?"
+                  return_code="$?"
 
-              if [ "$return_code" -eq 4 ]; then
-                http --check-status \
+                  if [ "$return_code" -eq 4 ]; then
+                  http --check-status \
                      --auth "$user:$password" \
                      POST "${apiUrl}/repositories/maven/hosted/" <<EOF
-                {
+                  {
                   "name": "${module.name}",
                   "online": ${toString module.online},
                   "storage": {
@@ -375,23 +400,23 @@ in
                     "versionPolicy": "${module.maven.versionPolicy}",
                     "layoutPolicy": "${module.maven.layoutPolicy}"
                   }
-                }
-              EOF
-              else
-                echo "Repository ${module.name} already exists, skipping unit"
-              fi
-            '') cfg.hostedRepositories.maven}
+                  }
+                  EOF
+                  else
+                  echo "Repository ${module.name} already exists, skipping unit"
+                  fi
+          '') cfg.hostedRepositories.maven}
           '';
 
           serviceConfig = {
-            Restart = "on-failure";
-            RestartSec = 15;
-            Type = "oneshot";
-            RemainAfterExit = true;
-          };
+          Restart = "on-failure";
+          RestartSec = 15;
+          Type = "oneshot";
+          RemainAfterExit = true;
         };
       };
     };
+  };
 
-    meta.maintainers = with lib.maintainers; [ ironpinguin ];
-  }
+  meta.maintainers = with lib.maintainers; [ ironpinguin ];
+}
