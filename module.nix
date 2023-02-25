@@ -45,6 +45,7 @@ let
         type = listOf str;
         description = "The list of privileges assigned to this role";
       };
+      # TODO: Add empty default
       roles = mkOption {
         type = listOf str;
         description = "The list of roles assigned to this role";
@@ -298,9 +299,9 @@ in
             password="$(cat "${toString cfg.apiUser.passwordFile}")"
 
             http --quiet \
-            --check-status \
-            --auth "$user:$password" \
-            GET "${apiUrl}/status/check"
+                 --check-status \
+                 --auth "$user:$password" \
+                 GET "${apiUrl}/status/check"
 
             error_code="$?"
 
@@ -345,7 +346,7 @@ in
               echo "The API user has already been created. Skipping unit."
             else
               echo "Some unknown error happened while calling the Nexus' API: ''${error_code}xx"
-                fi
+            fi
           '';
 
           serviceConfig = {
@@ -377,33 +378,33 @@ in
 
           ${concatMapStringsSep "\n" (module: ''
                   http --check-status \
-                   --quiet \
-                   --auth "$user:$password" \
-                   GET "${apiUrl}/repositories/maven/hosted/${module.name}"
+                       --quiet \
+                       --auth "$user:$password" \
+                       GET "${apiUrl}/repositories/maven/hosted/${module.name}"
 
                   return_code="$?"
 
                   if [ "$return_code" -eq 4 ]; then
                   http --check-status \
-                     --auth "$user:$password" \
-                     POST "${apiUrl}/repositories/maven/hosted/" <<EOF
-                  {
-                  "name": "${module.name}",
-                  "online": ${toString module.online},
-                  "storage": {
-                    "blobStoreName": "${module.storage.blobStoreName}",
-                    "writePolicy": "${module.storage.writePolicy}",
-                    "strictContentTypeValidation": ${toString module.storage.strictContentTypeValidation}
-                  },
-                  "maven": {
-                    "contentDisposition": "${module.maven.contentDisposition}",
-                    "versionPolicy": "${module.maven.versionPolicy}",
-                    "layoutPolicy": "${module.maven.layoutPolicy}"
-                  }
-                  }
+                       --auth "$user:$password" \
+                       POST "${apiUrl}/repositories/maven/hosted/" <<EOF
+                    {
+                      "name": "${module.name}",
+                      "online": ${toString module.online},
+                      "storage": {
+                        "blobStoreName": "${module.storage.blobStoreName}",
+                        "writePolicy": "${module.storage.writePolicy}",
+                        "strictContentTypeValidation": ${toString module.storage.strictContentTypeValidation}
+                      },
+                      "maven": {
+                        "contentDisposition": "${module.maven.contentDisposition}",
+                        "versionPolicy": "${module.maven.versionPolicy}",
+                        "layoutPolicy": "${module.maven.layoutPolicy}"
+                      }
+                    }
                   EOF
                   else
-                  echo "Repository ${module.name} already exists, skipping unit"
+                    echo "Repository ${module.name} already exists, skipping unit"
                   fi
           '') cfg.hostedRepositories.maven}
           '';
