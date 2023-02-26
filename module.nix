@@ -431,7 +431,6 @@ in
           in
           ''
             set +e
-            set -x
 
             http --quiet --check-status GET "${apiUrl}/status" > /dev/null || { echo "Nexus not started"; exit 1; }
             
@@ -449,7 +448,7 @@ in
 
             ${concatMapStringsSep "\n" (module: ''
               echo "Creating ${module.userId} user"
-              http  \
+              http --quiet \
                    --check-status \
                    --auth "$user:$password" \
                    POST "${apiUrl}/security/users" <<EOF
