@@ -176,7 +176,14 @@ in
           maven = mkOption {
             type = listOf mavenHostedRepositoryModule;
             default = [];
+            description = "List of Maven hosted modules to create by default";
           };
+        };
+
+        roles = mkOption {
+          type = listOf roleModule;
+          default = [];
+          description = "List of roles to create by default";
         };
 
         jvmOpts = mkOption {
@@ -282,7 +289,6 @@ in
           };
         };
 
-        # TODO: Actually, create roles from modules, and add a default one that creates the API user's one.
         create-nexus-roles = {
           description = "Nexus roles creation";
 
@@ -293,8 +299,26 @@ in
 
           path = [ pkgs.httpie ];
 
-          script = ''
+          # TODO: Can I use some nix-to-json conversion function?
+          script = 
+          let
+            roleModules = cfg.roles ++ [
+              {
+                # TODO: Maybe I should call it nixUser?
+                id = cfg.apiUser.role;
+                name = cfg.apiUser.role;
+                description = "API user role for the Nexus module";
+                privileges = [
+                  "nx-metrics-all" # TODO: I only use it for testing by calling /status/check... is this ok=
+                  "nx-repository-admin-*-*-add"
+                ];
+                roles = [];
+              }
+            ];
+          in 
+            ''
             set +e
+            set -x
 
             http --quiet --check-status GET "${apiUrl}/status" > /dev/null || { echo "Nexus not started"; exit 1; }
             
@@ -309,21 +333,27 @@ in
               exit 1
             fi
 
-            echo "Creating an API user role"
-            http --quiet \
-                 --check-status \
-                 --auth "$user:$password" \
-                 POST "${apiUrl}/security/roles" <<EOF
-              {
-                "id": "${cfg.apiUser.role}",
-                "name": "${cfg.apiUser.role}",
-                "description": "API user role for the Nexus module",
-                "privileges": [ 
-                  "nx-metrics-all",
-                  "nx-repository-admin-*-*-add"
-                ]
-              }
-            EOF
+            ${concatMapStringsSep "\n" (module: ''
+              echo "Creating ${module.name} role"
+              http --quiet \
+                   --check-status \
+                   --auth "$user:$password" \
+                   POST "${apiUrl}/security/roles" <<EOF
+                {
+                  "id": "${module.name}",
+                  "name": "${module.name}",
+                  "description": "${module.description}",
+                  "privileges": [ 
+                    ${concatMapStringsSep "," (privilege: ''"${privilege}"'') module.privileges}
+                  ],
+                  "roles": [ 
+                    ${concatMapStringsSep "," (role: ''"${role}"'') module.roles}
+                  ]
+                }
+              EOF
+              
+            '') roleModules}
+
 
           '';
 
