@@ -4,6 +4,7 @@
 with lib;
 
 # TODO: Maybe setting up admin's password?
+# TODO: I'm not handling passwords changing yet.
 let
   cfg = config.xservices.nexus;
   apiUrl = "http://localhost:${toString cfg.listenPort}/service/rest/v1";
@@ -149,6 +150,21 @@ let
                            --auth "${cfg.apiUser.name}:$(${bashScripts.getApiUserPassword})" \
                            GET "${apiUrl}/status/check"'';
     exitIfNexusIsNotStarted = ''http --quiet --check-status GET "${apiUrl}/status" > /dev/null || { echo "Nexus not started"; exit 1; }'';
+
+    # Creates $user and $password variables that hold the credentials to make requests to the API.
+    # It uses the Nix user if it exists, the admin user if its password is unchanged, or fails otherwise
+    setUpCredentials = ''
+      if ${bashScripts.apiUserExists}; then
+        user="${cfg.apiUser.name}"
+        password="$(${bashScripts.getApiUserPassword})"
+      elif ${bashScripts.adminStillHasInitialPassword}; then
+        user="admin"
+        password="$(${bashScripts.getInitialAdminPassword})"
+      else
+        echo "Neither API user exists nor admin has initial password. Nexus' installation is in an inconsistent state"
+        exit 1
+      fi
+    '';
   };
 in
 
@@ -371,17 +387,7 @@ in
             set +e
 
             ${bashScripts.exitIfNexusIsNotStarted}
-            
-            if ${bashScripts.apiUserExists}; then
-              user="${cfg.apiUser.name}"
-              password="$(${bashScripts.getApiUserPassword})"
-            elif ${bashScripts.adminStillHasInitialPassword}; then
-              user="admin"
-              password="$(${bashScripts.getInitialAdminPassword})"
-            else
-              echo "Neither API user exists nor admin has initial password. Nexus' installation is in an inconsistent state"
-              exit 1
-            fi
+            ${bashScripts.setUpCredentials}
 
             ${concatMapStringsSep "\n" (module: ''
               echo "Creating ${module.name} role"
@@ -412,8 +418,6 @@ in
 
           path = [ pkgs.httpie ];
 
-          # TODO: Reuse the user and password parts from above
-
           # TODO: I'm inlining the JSON because the password needs special treatment (getting it in bash)
           # can't I just create one JSON with toJSON for the other properties and merge it dynamically (maybe with jq?)
           # with one JSON with only the password, got from bash?
@@ -435,18 +439,7 @@ in
             set +e
 
             ${bashScripts.exitIfNexusIsNotStarted}
-            
-            if ${bashScripts.apiUserExists}; then
-              user="${cfg.apiUser.name}"
-              password="$(${bashScripts.getApiUserPassword})"
-            elif ${bashScripts.adminStillHasInitialPassword}; then
-              user="admin"
-              password="$(${bashScripts.getInitialAdminPassword})"
-            else
-              echo "Neither API user exists nor admin has initial password. Nexus' installation is in an inconsistent state"
-              exit 1
-            fi
-
+            ${bashScripts.setUpCredentials}
 
             ${concatMapStringsSep "\n" (module: ''
               echo "Creating ${module.userId} user"
