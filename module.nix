@@ -308,7 +308,7 @@ in
                 name = cfg.apiUser.role;
                 description = "API user role for the Nexus module";
                 privileges = [
-                  "nx-metrics-all" # TODO: I only use it for testing by calling /status/check... is this ok=
+                  "nx-metrics-all" # TODO: I only use it for testing by calling /status/check... is this ok?
                   "nx-repository-admin-*-*-add"
                 ];
                 roles = [];
@@ -317,7 +317,6 @@ in
           in 
             ''
             set +e
-            set -x
 
             http --quiet --check-status GET "${apiUrl}/status" > /dev/null || { echo "Nexus not started"; exit 1; }
             
@@ -337,13 +336,8 @@ in
               http --quiet \
                    --check-status \
                    --auth "$user:$password" \
-                   POST "${apiUrl}/security/roles" <<EOF
-                ${builtins.toJSON module}
-              EOF
-              
+                   POST "${apiUrl}/security/roles" <<< '${builtins.toJSON module}'
             '') roleModules}
-
-
           '';
 
           serviceConfig = {
