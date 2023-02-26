@@ -411,6 +411,10 @@ in
           path = [ pkgs.httpie ];
 
           # TODO: Reuse the user and password parts from above
+
+          # TODO: I'm inlining the JSON because the password needs special treatment (getting it in bash)
+          # can't I just create one JSON with toJSON for the other properties and merge it dynamically (maybe with jq?)
+          # with one JSON with only the password, got from bash?
           script = 
           let
             userModules = cfg.users ++ [
