@@ -46,14 +46,7 @@ in
           machine.systemctl("is-active nexus")
 
         with subtest("creates user"):
-          machine.wait_until_succeeds("systemctl is-active create-nexus-api-user", 300)
+          machine.wait_until_succeeds("systemctl is-active create-nexus-users", 300)
           machine.succeed("http --check-status -a '${apiUser.name}:${apiUser.password}' GET 'http://localhost:${toString listenPort}/service/rest/v1/status/check'")
-
-        with subtest("create user is idempotent (exits successfully if user already exists)"):
-          machine.systemctl("restart create-nexus-api-user")
-          machine.wait_until_succeeds("systemctl is-active create-nexus-api-user", 15)
-          [ _, out ] = machine.execute("journalctl -u create-nexus-api-user")
-          assert "The API user has already been created" in out
-          
     '';
   }

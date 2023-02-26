@@ -76,6 +76,11 @@ let
         description = "The email address associated with the user";
       };
 
+      passwordFile = mkOption {
+        type = oneOf [ path str ];
+        description = "Path to the file that contains this user's password";
+      };
+
       status = mkOption {
         type = enum [ "active" "locked" "disabled" "changepassword"];
         description = "The user's status, e.g. active or disabled";
@@ -220,6 +225,12 @@ in
           type = listOf roleModule;
           default = [];
           description = "List of roles to create by default";
+        };
+
+        users = mkOption {
+          type = listOf userModule;
+          default = [];
+          description = "List of users to create by default";
         };
 
         jvmOpts = mkOption {
@@ -387,50 +398,70 @@ in
           };
         };
 
-        # TODO: XXX: This might have a problem... what if the passwordFile changes?
-        # It will try to use the new password and just fail
-        # Maybe I could copy the password when the user is created
-        # somewhere else and check whether it changed on next runs?
-        create-nexus-api-user = {
-          description = "Nexus API user creation";
+        # TODO: Test
+        create-nexus-users = {
+          description = "Nexus users creation";
 
           wantedBy = [ "multi-user.target" ];
 
-          partOf = [ "create-nexus-roles.service" ];
-          after = [ "create-nexus-roles.service" ];
+          # TODO: Maybe use `requires`?
+          partOf = [ "create-nexus-roles.service"];
+          after = [ "create-nexus-roles.service"];
 
           path = [ pkgs.httpie ];
 
-          script = ''
+          # TODO: Reuse the user and password parts from above
+          script = 
+          let
+            userModules = cfg.users ++ [
+              {
+                userId = cfg.apiUser.name;
+                firstName = "Nix";
+                lastName = "User";
+                emailAddress = "user@nix.com";
+                status = "active";
+                passwordFile = cfg.apiUser.passwordFile;
+                roles = [ cfg.apiUser.role ];
+              }
+            ];
+          in
+          ''
             set +e
+            set -x
 
             http --quiet --check-status GET "${apiUrl}/status" > /dev/null || { echo "Nexus not started"; exit 1; }
+            
+            if ${bashScripts.apiUserExists}; then
+              user="${cfg.apiUser.name}"
+              password="$(${bashScripts.getApiUserPassword})"
+            elif ${bashScripts.adminStillHasInitialPassword}; then
+              user="admin"
+              password="$(${bashScripts.getInitialAdminPassword})"
+            else
+              echo "Neither API user exists nor admin has initial password. Nexus' installation is in an inconsistent state"
+              exit 1
+            fi
 
-            user="${cfg.apiUser.name}"
-            password="$(${bashScripts.getApiUserPassword})"
 
-            if ! ${bashScripts.apiUserExists}; then
-              admin_password="$(${bashScripts.getInitialAdminPassword})"
-              echo "Creating the API user"
-              http --quiet \
+            ${concatMapStringsSep "\n" (module: ''
+              echo "Creating ${module.userId} user"
+              http  \
                    --check-status \
-                   --auth "admin:$admin_password" \
+                   --auth "$user:$password" \
                    POST "${apiUrl}/security/users" <<EOF
                 {
-                  "userId": "$user",
-                  "firstName": "Nix",
-                  "lastName": "User",
-                  "emailAddress": "user@nix.com",
-                  "status": "active",
-                  "password": "$password",
+                  "userId": "${module.userId}",
+                  "firstName": "${module.firstName}",
+                  "lastName": "${module.lastName}",
+                  "emailAddress": "${module.emailAddress}",
+                  "status": "${module.status}",
+                  "password": "$(cat "${toString module.passwordFile}")",
                   "roles": [
-                    "${cfg.apiUser.role}"
+                    ${concatMapStringsSep "," (role: ''"${role}"'') module.roles}
                   ]
                 }
-            EOF
-            else
-              echo "The API user has already been created. Skipping unit."
-            fi
+              EOF
+            '') userModules}
           '';
 
           serviceConfig = {
@@ -445,8 +476,8 @@ in
           description = "Configure Maven repositories";
 
           wantedBy = [ "multi-user.target"];
-          requires = [ "create-nexus-api-user.service"];
-          after = [ "create-nexus-api-user.service"];
+          requires = [ "create-nexus-users.service"];
+          after = [ "create-nexus-users.service"];
 
           path = [ pkgs.httpie ];
 
