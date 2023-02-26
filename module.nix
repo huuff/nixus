@@ -238,7 +238,7 @@ in
       };
     };
 
-    config =mkIf cfg.enable {
+    config = mkIf cfg.enable {
       users.users.${cfg.user} = {
         isSystemUser = true;
         group = cfg.group;
@@ -289,6 +289,8 @@ in
           };
         };
 
+        # TODO: Test
+        # TODO: Update them if they already exist
         create-nexus-roles = {
           description = "Nexus roles creation";
 
