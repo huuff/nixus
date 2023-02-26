@@ -54,6 +54,42 @@ let
     };
   };
 
+  userModule = with types; submodule {
+    options = {
+      userId = mkOption {
+        type = str;
+        description = "The userid which is required for login. This value cannot be changed";
+      };
+
+      firstName = mkOption {
+        type = str;
+        description = "The first name of the user";
+      };
+
+      lastName = mkOption {
+        type = str;
+        description = "The last name of the user";
+      };
+
+      emailAddress = mkOption {
+        type = str;
+        description = "The email address associated with the user";
+      };
+
+      status = mkOption {
+        type = enum [ "active" "locked" "disabled" "changepassword"];
+        description = "The user's status, e.g. active or disabled";
+        default = "active";
+      };
+
+      roles = mkOption {
+        type = listOf str;
+        description = "The roles which the user has been assigned within Nexus.";
+        default = [];
+      };
+    };
+  };
+
   mavenHostedRepositoryModule = with types; submodule {
     options = {
       name = mkOption {
@@ -291,6 +327,7 @@ in
 
         # TODO: Test
         # TODO: Update them if they already exist
+        # TODO: Maybe re-enable set -e for the creation api calls
         create-nexus-roles = {
           description = "Nexus roles creation";
 
