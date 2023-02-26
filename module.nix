@@ -139,6 +139,7 @@ let
       };
     };
   };
+  # TODO: Maybe rename to shellScripts?
   bashScripts = {
     adminStillHasInitialPassword = ''test -f ${cfg.home}/nexus3/admin.password'';
     getInitialAdminPassword = ''cat "${cfg.home}/nexus3/admin.password"'';
@@ -147,6 +148,7 @@ let
                            --check-status \
                            --auth "${cfg.apiUser.name}:$(${bashScripts.getApiUserPassword})" \
                            GET "${apiUrl}/status/check"'';
+    exitIfNexusIsNotStarted = ''http --quiet --check-status GET "${apiUrl}/status" > /dev/null || { echo "Nexus not started"; exit 1; }'';
   };
 in
 
@@ -368,7 +370,7 @@ in
             ''
             set +e
 
-            http --quiet --check-status GET "${apiUrl}/status" > /dev/null || { echo "Nexus not started"; exit 1; }
+            ${bashScripts.exitIfNexusIsNotStarted}
             
             if ${bashScripts.apiUserExists}; then
               user="${cfg.apiUser.name}"
@@ -432,7 +434,7 @@ in
           ''
             set +e
 
-            http --quiet --check-status GET "${apiUrl}/status" > /dev/null || { echo "Nexus not started"; exit 1; }
+            ${bashScripts.exitIfNexusIsNotStarted}
             
             if ${bashScripts.apiUserExists}; then
               user="${cfg.apiUser.name}"
