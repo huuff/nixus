@@ -299,7 +299,6 @@ in
 
           path = [ pkgs.httpie ];
 
-          # TODO: Can I use some nix-to-json conversion function?
           script = 
           let
             roleModules = cfg.roles ++ [
@@ -339,17 +338,7 @@ in
                    --check-status \
                    --auth "$user:$password" \
                    POST "${apiUrl}/security/roles" <<EOF
-                {
-                  "id": "${module.name}",
-                  "name": "${module.name}",
-                  "description": "${module.description}",
-                  "privileges": [ 
-                    ${concatMapStringsSep "," (privilege: ''"${privilege}"'') module.privileges}
-                  ],
-                  "roles": [ 
-                    ${concatMapStringsSep "," (role: ''"${role}"'') module.roles}
-                  ]
-                }
+                ${builtins.toJSON module}
               EOF
               
             '') roleModules}
