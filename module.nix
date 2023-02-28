@@ -140,26 +140,25 @@ let
       };
     };
   };
-  # TODO: Maybe rename to shellScripts?
-  bashScripts = {
+  shellScripts = {
     adminStillHasInitialPassword = ''test -f ${cfg.home}/nexus3/admin.password'';
     getInitialAdminPassword = ''cat "${cfg.home}/nexus3/admin.password"'';
     getApiUserPassword = ''cat "${toString cfg.apiUser.passwordFile}"'';
     apiUserExists = ''http --quiet \
                            --check-status \
-                           --auth "${cfg.apiUser.name}:$(${bashScripts.getApiUserPassword})" \
+                           --auth "${cfg.apiUser.name}:$(${shellScripts.getApiUserPassword})" \
                            GET "${apiUrl}/status/check"'';
     exitIfNexusIsNotStarted = ''http --quiet --check-status GET "${apiUrl}/status" > /dev/null || { echo "Nexus not started"; exit 1; }'';
 
     # Creates $user and $password variables that hold the credentials to make requests to the API.
     # It uses the Nix user if it exists, the admin user if its password is unchanged, or fails otherwise
     setUpCredentials = ''
-      if ${bashScripts.apiUserExists}; then
+      if ${shellScripts.apiUserExists}; then
         user="${cfg.apiUser.name}"
-        password="$(${bashScripts.getApiUserPassword})"
-      elif ${bashScripts.adminStillHasInitialPassword}; then
+        password="$(${shellScripts.getApiUserPassword})"
+      elif ${shellScripts.adminStillHasInitialPassword}; then
         user="admin"
-        password="$(${bashScripts.getInitialAdminPassword})"
+        password="$(${shellScripts.getInitialAdminPassword})"
       else
         echo "Neither API user exists nor admin has initial password. Nexus' installation is in an inconsistent state"
         exit 1
@@ -386,8 +385,8 @@ in
             ''
             set +e
 
-            ${bashScripts.exitIfNexusIsNotStarted}
-            ${bashScripts.setUpCredentials}
+            ${shellScripts.exitIfNexusIsNotStarted}
+            ${shellScripts.setUpCredentials}
 
             ${concatMapStringsSep "\n" (module: ''
               echo "Creating ${module.name} role"
@@ -438,8 +437,8 @@ in
           ''
             set +e
 
-            ${bashScripts.exitIfNexusIsNotStarted}
-            ${bashScripts.setUpCredentials}
+            ${shellScripts.exitIfNexusIsNotStarted}
+            ${shellScripts.setUpCredentials}
 
             ${concatMapStringsSep "\n" (module: ''
               echo "Creating ${module.userId} user"
