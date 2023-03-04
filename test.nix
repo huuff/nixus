@@ -63,5 +63,9 @@ in
         with subtest("creates api user"):
           machine.wait_until_succeeds("systemctl is-active create-nexus-users", 300)
           machine.succeed("http --check-status -a '${apiUser.name}:${apiUser.password}' GET 'http://localhost:${toString listenPort}/service/rest/v1/status/check'")
+
+        with subtest("updates admin"):
+          # No need to wait for the unit since that was already done in the previous test
+          machine.succeed("http --check-status -a 'admin:${adminUser.password}' GET 'http://localhost:${toString listenPort}/service/rest/v1/status/check'")
     '';
   }

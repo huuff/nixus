@@ -140,6 +140,7 @@ let
       };
     };
   };
+  adminUser = findFirst (it: it.userId == "admin") null cfg.users;
   shellScripts = {
     adminStillHasInitialPassword = ''test -f ${cfg.home}/nexus3/admin.password'';
     getInitialAdminPassword = ''cat "${cfg.home}/nexus3/admin.password"'';
@@ -160,9 +161,16 @@ let
         user="admin"
         password="$(${shellScripts.getInitialAdminPassword})"
       else
-        echo "Neither API user exists nor admin has initial password. Nexus' installation is in an inconsistent state"
-        exit 1
+        ${if adminUser != null
+          then ''
+            user="admin"
+            password="$(cat ${toString adminUser.passwordFile})"
+          ''
+          else ''
+            echo "No API user exists, the initial admin password file doesn't exist and the admin user is not provided in the nix configuration. This should never had happened and you should report this as an issue."
+          ''}
       fi
+      echo "Using user $user"
     '';
   };
 in
@@ -415,8 +423,14 @@ in
           partOf = [ "create-nexus-roles.service"];
           after = [ "create-nexus-roles.service"];
 
-          path = [ pkgs.httpie ];
+          path = with pkgs; [
+            httpie
+            jq
+          ];
 
+          # TODO: I removed the `--quiet` arg from http invocations
+          # to debug, but this might leak sensitive information...
+          # add a nexus option (`debug`) that allows easily enabling/disabling it
           # TODO: I'm inlining the JSON because the password needs special treatment (getting it in bash)
           # can't I just create one JSON with toJSON for the other properties and merge it dynamically (maybe with jq?)
           # with one JSON with only the password, got from bash?
@@ -441,12 +455,13 @@ in
             ${shellScripts.setUpCredentials}
 
             ${concatMapStringsSep "\n" (module: ''
-              user_exists=$(http GET "${apiUrl}/security/users" | grep '"userId": "${module.userId}"')
+              user_exists=$(http --ignore-stdin --auth "$user:$password" GET "${apiUrl}/security/users" | jq '.[] | select(.userId == "${module.userId}")')
+              echo "Value of user_exists $user_exists"
 
               if [ -z "$user_exists" ]
               then
                 echo "Creating ${module.userId} user"
-                http --quiet \
+                http \
                      --check-status \
                      --auth "$user:$password" \
                      POST "${apiUrl}/security/users" <<EOF
@@ -464,7 +479,7 @@ in
               EOF
               else
                 echo "Updating user ${module.userId}"
-                http --quiet \
+                http \
                      --check-status \
                      --auth "$user:$password" \
                         PUT "${apiUrl}/security/users/${module.userId}" <<EOF
@@ -474,12 +489,19 @@ in
                         "lastName": "${module.lastName}",
                         "emailAddress": "${module.emailAddress}",
                         "status": "${module.status}",
+                        "source": "default",
                         "password": "$(cat "${toString module.passwordFile}")",
                         "roles": [
                           ${concatMapStringsSep "," (role: ''"${role}"'') module.roles}
                         ]
                       }
               EOF
+                echo "Updating password for user ${module.userId}"
+                http \
+                      --check-status \
+                      --auth "$user:$password" \
+                      PUT "${apiUrl}/security/users/${module.userId}/change-password" Content-Type:text/plain < "${module.passwordFile}"
+
               fi
 
               ${shellScripts.setUpCredentials}
