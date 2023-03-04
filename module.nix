@@ -380,6 +380,7 @@ in
 
         # TODO: Test
         # TODO: A better name, since it also updates users
+        # TODO: Update admin is breaking because no roles are provided? Kinda obvious, since I'm setting the roles in the "adminUser" but not in the users array
         create-nexus-users = {
           description = "Nexus users creation";
 

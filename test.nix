@@ -5,6 +5,13 @@ let
   adminUser = {
     password = "adminpassword";
   };
+  testRole = {
+    id = "test-role";
+    name = "test-role";
+    description = "Role to test";
+    privileges = [ "nx-metrics-all" ];
+    roles = [];
+  };
 in
   pkgs.nixosTest {
     name = "nixus";
@@ -26,17 +33,7 @@ in
 
           enable = true;
 
-          roles = [
-            {
-              id = "test-role";
-              name = "test-role";
-              description = "Role to test";
-              privileges = [
-                "nx-metrics-all"
-              ];
-              roles = [];
-            }
-          ];
+          roles = [ testRole ];
 
           users = [
             {
@@ -68,6 +65,10 @@ in
           machine.wait_until_succeeds("systemctl is-active create-nexus-users", 100)
 
         with subtest("admin password is set"):
-          machine.succeed("http --check-status -a 'admin:${adminUser.password}' GET 'http://localhost:${toString listenPort}/service/rest/v1/status/check'")
+          machine.succeed("http --check-status --auth 'admin:${adminUser.password}' GET 'http://localhost:${toString listenPort}/service/rest/v1/status/check'")
+
+        with subtest("creates roles"):
+          # TODO: Test that the contents of the role match the expected
+          machine.succeed("http --check-status --auth 'admin:${adminUser.password}' GET 'http://localhost:${toString listenPort}/service/rest/v1/security/roles/${testRole.id}'") 
     '';
   }
