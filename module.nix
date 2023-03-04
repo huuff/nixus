@@ -422,7 +422,7 @@ in
           # with one JSON with only the password, got from bash?
           script = 
           let
-            userModules = cfg.users ++ [
+            userModules = (filter (it: it.name != "admin") cfg.users) ++ [
               {
                 userId = cfg.apiUser.name;
                 firstName = "Nix";
