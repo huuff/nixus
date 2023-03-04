@@ -402,7 +402,6 @@ in
           # with one JSON with only the password, got from bash?
           script = 
           let
-            userModules = cfg.users;
             # Append the nx-admin role to the admin user if it has no roles
             adminUser = 
               if adminUser.roles == []
@@ -467,7 +466,7 @@ in
               fi
 
               ${shellScripts.setUpCredentials}
-            '') userModules}
+            '') cfg.users}
           '';
 
           serviceConfig = {
