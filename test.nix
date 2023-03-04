@@ -6,6 +6,9 @@ let
     password = "apiuserpassword";
     name = "apiuser";
   };
+  adminUser = {
+    password = "adminpassword";
+  };
 in
   pkgs.nixosTest {
     name = "nixus";
@@ -31,6 +34,18 @@ in
             name = apiUser.name;
             passwordFile = pkgs.writeText "apiuser.password" apiUser.password;
           };
+
+          users = [
+            {
+              userId = "admin";
+              firstName = "Administrator";
+              lastName = "User";
+              emailAddress = "admin@example.org";
+              passwordFile = pkgs.writeText "admin.password" adminUser.password;
+              # TODO: Force this role to always be present in the admin
+              roles = [ "nx-admin" ];
+            }
+          ];
         };
       };
 
@@ -45,7 +60,7 @@ in
         with subtest("main unit is active"):
           machine.systemctl("is-active nexus")
 
-        with subtest("creates user"):
+        with subtest("creates api user"):
           machine.wait_until_succeeds("systemctl is-active create-nexus-users", 300)
           machine.succeed("http --check-status -a '${apiUser.name}:${apiUser.password}' GET 'http://localhost:${toString listenPort}/service/rest/v1/status/check'")
     '';
