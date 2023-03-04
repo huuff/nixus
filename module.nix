@@ -422,7 +422,7 @@ in
           # with one JSON with only the password, got from bash?
           script = 
           let
-            userModules = (filter (it: it.name != "admin") cfg.users) ++ [
+            userModules = cfg.users ++ [
               {
                 userId = cfg.apiUser.name;
                 firstName = "Nix";
@@ -463,7 +463,23 @@ in
                   }
               EOF
               else
-                echo "User ${module.userId} already exists"
+                echo "Updating user ${module.userId}"
+                http --quiet \
+                     --check-status \
+                     --auth "$user:$password" \
+                        PUT "${apiUrl}/security/users/${module.userId}" <<EOF
+                      {
+                        "userId": "${module.userId}",
+                        "firstName": "${module.firstName}",
+                        "lastName": "${module.lastName}",
+                        "emailAddress": "${module.emailAddress}",
+                        "status": "${module.status}",
+                        "password": "$(cat "${toString module.passwordFile}")",
+                        "roles": [
+                          ${concatMapStringsSep "," (role: ''"${role}"'') module.roles}
+                        ]
+                      }
+              EOF
               fi
 
               ${shellScripts.setUpCredentials}
