@@ -465,6 +465,8 @@ in
               else
                 echo "User ${module.userId} already exists"
               fi
+
+              ${shellScripts.setUpCredentials}
             '') userModules}
           '';
 
