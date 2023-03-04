@@ -281,6 +281,13 @@ in
     };
 
     config = mkIf cfg.enable {
+      assertions = [
+        {
+          assertion = adminUser != null;
+          message = "There must be an user with userId 'admin' declared.";
+        }
+      ];
+
       users.users.${cfg.user} = {
         isSystemUser = true;
         group = cfg.group;
