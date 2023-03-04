@@ -33,8 +33,6 @@ in
               lastName = "User";
               emailAddress = "admin@example.org";
               passwordFile = pkgs.writeText "admin.password" adminUser.password;
-              # TODO: Force this role to always be present in the admin
-              roles = [ "nx-admin" ];
             }
           ];
         };

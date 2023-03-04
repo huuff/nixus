@@ -286,6 +286,10 @@ in
           assertion = adminUser != null;
           message = "There must be an user with userId 'admin' declared.";
         }
+        {
+          assertion = adminUser.roles == [] || elem "nx-admin" adminUser.roles;
+          message = "The 'roles' attribute of the admin user must be empty or contain 'nx-admin'";
+        }
       ];
 
       users.users.${cfg.user} = {
@@ -399,6 +403,12 @@ in
           script = 
           let
             userModules = cfg.users;
+            # Append the nx-admin role to the admin user if it has no roles
+            adminUser = 
+              if adminUser.roles == []
+              then adminUser // { roles = ["nx-admin"]; }
+              else adminUser
+              ;
           in
           ''
             set +e
