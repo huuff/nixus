@@ -13,9 +13,16 @@
     nexus = {
       enable = true;
 
-      apiUser = {
-        passwordFile = pkgs.writeText "apiuser.password" "test";
-      };
+      users = [
+        {
+          userId = "admin";
+          firstName = "Administrator";
+          lastName = "User";
+          emailAddress = "admin@example.org";
+          passwordFile = pkgs.writeText "admin.password" "admin";
+          roles = [ "nx-admin" ];
+        }
+      ];
 
       hostedRepositories = {
         maven = [

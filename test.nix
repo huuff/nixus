@@ -2,10 +2,6 @@
 let
   listenPort = 8081;
   nexusHomeDir = "/var/lib/sonatype-work";
-  apiUser = {
-    password = "apiuserpassword";
-    name = "apiuser";
-  };
   adminUser = {
     password = "adminpassword";
   };
@@ -29,11 +25,6 @@ in
           inherit listenPort; 
 
           enable = true;
-
-          apiUser = {
-            name = apiUser.name;
-            passwordFile = pkgs.writeText "apiuser.password" apiUser.password;
-          };
 
           users = [
             {
@@ -60,12 +51,8 @@ in
         with subtest("main unit is active"):
           machine.systemctl("is-active nexus")
 
-        with subtest("creates api user"):
+        with subtest("admin password is set"):
           machine.wait_until_succeeds("systemctl is-active create-nexus-users", 300)
-          machine.succeed("http --check-status -a '${apiUser.name}:${apiUser.password}' GET 'http://localhost:${toString listenPort}/service/rest/v1/status/check'")
-
-        with subtest("updates admin"):
-          # No need to wait for the unit since that was already done in the previous test
           machine.succeed("http --check-status -a 'admin:${adminUser.password}' GET 'http://localhost:${toString listenPort}/service/rest/v1/status/check'")
     '';
   }

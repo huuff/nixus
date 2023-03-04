@@ -3,8 +3,8 @@
 
 with lib;
 
-# TODO: Maybe setting up admin's password?
 # TODO: I'm not handling passwords changing yet.
+# TODO: Maybe add set +x, set -x only around scripts that need failing status codes?
 let
   cfg = config.xservices.nexus;
   apiUrl = "http://localhost:${toString cfg.listenPort}/service/rest/v1";
@@ -142,35 +142,26 @@ let
   };
   adminUser = findFirst (it: it.userId == "admin") null cfg.users;
   shellScripts = {
-    adminStillHasInitialPassword = ''test -f ${cfg.home}/nexus3/admin.password'';
-    getInitialAdminPassword = ''cat "${cfg.home}/nexus3/admin.password"'';
-    getApiUserPassword = ''cat "${toString cfg.apiUser.passwordFile}"'';
-    apiUserExists = ''http --quiet \
-                           --check-status \
-                           --auth "${cfg.apiUser.name}:$(${shellScripts.getApiUserPassword})" \
-                           GET "${apiUrl}/status/check"'';
+    # TODO: Wait for this in a specific unit that runs before any other
     exitIfNexusIsNotStarted = ''http --quiet --check-status GET "${apiUrl}/status" > /dev/null || { echo "Nexus not started"; exit 1; }'';
 
     # Creates $user and $password variables that hold the credentials to make requests to the API.
-    # It uses the Nix user if it exists, the admin user if its password is unchanged, or fails otherwise
     setUpCredentials = ''
-      if ${shellScripts.apiUserExists}; then
-        user="${cfg.apiUser.name}"
-        password="$(${shellScripts.getApiUserPassword})"
-      elif ${shellScripts.adminStillHasInitialPassword}; then
+      if [ -f "${cfg.home}/nexus3/admin.password" ]; then
         user="admin"
-        password="$(${shellScripts.getInitialAdminPassword})"
+        password="$(cat "${cfg.home}/nexus3/admin.password")"
+        echo "Using admin user with initial password"
       else
         ${if adminUser != null
           then ''
             user="admin"
             password="$(cat ${toString adminUser.passwordFile})"
+            echo "Using admin user with provided password"
           ''
           else ''
             echo "No API user exists, the initial admin password file doesn't exist and the admin user is not provided in the nix configuration. This should never had happened and you should report this as an issue."
           ''}
       fi
-      echo "Using user $user"
     '';
   };
 in
@@ -215,27 +206,6 @@ in
           type = int;
           default = 8081;
           description = mdDoc "Port to listen on.";
-        };
-
-        apiUser = {
-          name = mkOption {
-            type = str;
-            default = "nix";
-            description = mdDoc "Name of the user that will be created to manage Nexus from nix";
-          };
-
-          # TODO: Randomly create one if it doesn't exist?
-          passwordFile = mkOption {
-            type = oneOf [ str path ];
-            default = null;
-            description = "Path to the file that'll contain the Nix user's password";
-          };
-
-          role = mkOption {
-            type = str;
-            default = "nix-api-user";
-            description = "Name of the role that'll be created for the user that'll be used to manage Nexus by nix";
-          };
         };
 
         hostedRepositories = {
@@ -374,23 +344,7 @@ in
 
           path = [ pkgs.httpie ];
 
-          script = 
-          let
-            roleModules = cfg.roles ++ [
-              {
-                # TODO: Maybe I should call it nixUser?
-                id = cfg.apiUser.role;
-                name = cfg.apiUser.role;
-                description = "API user role for the Nexus module";
-                privileges = [
-                  "nx-metrics-all" # TODO: I only use it for testing by calling /status/check... is this ok?
-                  "nx-repository-admin-*-*-add"
-                ];
-                roles = [];
-              }
-            ];
-          in 
-            ''
+          script = ''
             set +e
 
             ${shellScripts.exitIfNexusIsNotStarted}
@@ -402,7 +356,7 @@ in
                    --check-status \
                    --auth "$user:$password" \
                    POST "${apiUrl}/security/roles" <<< '${builtins.toJSON module}'
-            '') roleModules}
+            '') cfg.roles}
           '';
 
           serviceConfig = {
@@ -414,6 +368,7 @@ in
         };
 
         # TODO: Test
+        # TODO: A better name, since it also updates users
         create-nexus-users = {
           description = "Nexus users creation";
 
@@ -436,17 +391,7 @@ in
           # with one JSON with only the password, got from bash?
           script = 
           let
-            userModules = cfg.users ++ [
-              {
-                userId = cfg.apiUser.name;
-                firstName = "Nix";
-                lastName = "User";
-                emailAddress = "user@nix.com";
-                status = "active";
-                passwordFile = cfg.apiUser.passwordFile;
-                roles = [ cfg.apiUser.role ];
-              }
-            ];
+            userModules = cfg.users;
           in
           ''
             set +e
@@ -532,8 +477,7 @@ in
           ''
           set +e
 
-          user="${cfg.apiUser.name}"
-          password="$(cat "${toString cfg.apiUser.passwordFile}")"
+          ${shellScripts.setUpCredentials}
 
           ${concatMapStringsSep "\n" (module: ''
               http --check-status \
