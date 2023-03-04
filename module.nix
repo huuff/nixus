@@ -164,6 +164,9 @@ let
       fi
     '';
   };
+  # --quiet argument only if debug is false, otherwise it's the empty string
+  # useful for enabling/disabling logging in httpie commands
+  optionalQuiet = optionalString (!cfg.debug) "--quiet";
 in
 
   {
@@ -277,6 +280,12 @@ in
             for further information.
           '';
         };
+
+        debug = mkOption {
+          type = bool;
+          default = false;
+          description = "Enables logging debug statements in systemd units and scripts. Should be disabled unless testing since these may leak sensitive information";
+        };
       };
     };
 
@@ -363,7 +372,7 @@ in
 
             ${concatMapStringsSep "\n" (module: ''
               echo "Creating ${module.name} role"
-              http --quiet \
+              http ${optionalQuiet} \
                    --check-status \
                    --auth "$user:$password" \
                    POST "${apiUrl}/security/roles" <<< '${builtins.toJSON module}'
@@ -410,6 +419,9 @@ in
               else adminUser
               ;
           in
+          # TODO: Try to split the user_exists declaration across lines
+          # TODO: Remove printing of user_exists
+          # TODO: Try to add a comment explaining why credentials are set up again
           ''
             set +e
 
@@ -417,13 +429,13 @@ in
             ${shellScripts.setUpCredentials}
 
             ${concatMapStringsSep "\n" (module: ''
-              user_exists=$(http --ignore-stdin --auth "$user:$password" GET "${apiUrl}/security/users" | jq '.[] | select(.userId == "${module.userId}")')
+              user_exists=$(http ${optionalQuiet} --ignore-stdin --auth "$user:$password" GET "${apiUrl}/security/users" | jq '.[] | select(.userId == "${module.userId}")')
               echo "Value of user_exists $user_exists"
 
               if [ -z "$user_exists" ]
               then
                 echo "Creating ${module.userId} user"
-                http \
+                http ${optionalQuiet} \
                      --check-status \
                      --auth "$user:$password" \
                      POST "${apiUrl}/security/users" <<EOF
@@ -441,7 +453,7 @@ in
               EOF
               else
                 echo "Updating user ${module.userId}"
-                http \
+                http ${optionalQuiet} \
                      --check-status \
                      --auth "$user:$password" \
                         PUT "${apiUrl}/security/users/${module.userId}" <<EOF
@@ -459,7 +471,7 @@ in
                       }
               EOF
                 echo "Updating password for user ${module.userId}"
-                http \
+                http ${optionalQuiet} \
                       --check-status \
                       --auth "$user:$password" \
                       PUT "${apiUrl}/security/users/${module.userId}/change-password" Content-Type:text/plain < "${module.passwordFile}"
@@ -497,15 +509,16 @@ in
           ${shellScripts.setUpCredentials}
 
           ${concatMapStringsSep "\n" (module: ''
-              http --check-status \
-                   --quiet \
+              http ${optionalQuiet} \
+                   --check-status \
                    --auth "$user:$password" \
                    GET "${apiUrl}/repositories/maven/hosted/${module.name}"
 
               return_code="$?"
 
               if [ "$return_code" -eq 4 ]; then
-              http --check-status \
+              http ${optionalQuiet} \
+                   --check-status \
                    --auth "$user:$password" \
                    POST "${apiUrl}/repositories/maven/hosted/" <<EOF
                 {

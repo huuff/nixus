@@ -32,6 +32,7 @@ in
           inherit listenPort; 
 
           enable = true;
+          debug = true;
 
           roles = [ testRole ];
 
