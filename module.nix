@@ -421,7 +421,6 @@ in
           in
           # TODO: Try to split the user_exists declaration across lines
           # TODO: Remove printing of user_exists
-          # TODO: Try to add a comment explaining why credentials are set up again
           ''
             set +e
 
@@ -478,6 +477,8 @@ in
 
               fi
 
+              # Loading credentials again in case we just changed
+              # the admin's
               ${shellScripts.setUpCredentials}
             '') cfg.users}
           '';
