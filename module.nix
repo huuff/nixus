@@ -441,23 +441,30 @@ in
             ${shellScripts.setUpCredentials}
 
             ${concatMapStringsSep "\n" (module: ''
-              echo "Creating ${module.userId} user"
-              http --quiet \
-                   --check-status \
-                   --auth "$user:$password" \
-                   POST "${apiUrl}/security/users" <<EOF
-                {
-                  "userId": "${module.userId}",
-                  "firstName": "${module.firstName}",
-                  "lastName": "${module.lastName}",
-                  "emailAddress": "${module.emailAddress}",
-                  "status": "${module.status}",
-                  "password": "$(cat "${toString module.passwordFile}")",
-                  "roles": [
-                    ${concatMapStringsSep "," (role: ''"${role}"'') module.roles}
-                  ]
-                }
+              user_exists=$(http GET "${apiUrl}/security/users" | grep '"userId": "${module.userId}"')
+
+              if [ -z "$user_exists" ]
+              then
+                echo "Creating ${module.userId} user"
+                http --quiet \
+                     --check-status \
+                     --auth "$user:$password" \
+                     POST "${apiUrl}/security/users" <<EOF
+                  {
+                    "userId": "${module.userId}",
+                    "firstName": "${module.firstName}",
+                    "lastName": "${module.lastName}",
+                    "emailAddress": "${module.emailAddress}",
+                    "status": "${module.status}",
+                    "password": "$(cat "${toString module.passwordFile}")",
+                    "roles": [
+                      ${concatMapStringsSep "," (role: ''"${role}"'') module.roles}
+                    ]
+                  }
               EOF
+              else
+                echo "User ${module.userId} already exists"
+              fi
             '') userModules}
           '';
 
