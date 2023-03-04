@@ -61,8 +61,13 @@ in
         with subtest("main unit is active"):
           machine.systemctl("is-active nexus")
 
+        with subtest("create roles unit is active"):
+          machine.wait_until_succeeds("systemctl is-active create-nexus-roles", 300)
+
+        with subtest("create users unit is active"):
+          machine.wait_until_succeeds("systemctl is-active create-nexus-users", 100)
+
         with subtest("admin password is set"):
-          machine.wait_until_succeeds("systemctl is-active create-nexus-users", 300)
           machine.succeed("http --check-status -a 'admin:${adminUser.password}' GET 'http://localhost:${toString listenPort}/service/rest/v1/status/check'")
     '';
   }
