@@ -26,6 +26,18 @@ in
 
           enable = true;
 
+          roles = [
+            {
+              id = "test-role";
+              name = "test-role";
+              description = "Role to test";
+              privileges = [
+                "nx-metrics-all"
+              ];
+              roles = [];
+            }
+          ];
+
           users = [
             {
               userId = "admin";
