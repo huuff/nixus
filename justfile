@@ -1,3 +1,3 @@
 test:
   nix flake check
-  @notify-send "Nixus" "Finished tests"
+  notify-send "Nixus" "Finished tests"

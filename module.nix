@@ -419,7 +419,6 @@ in
               else adminUser
               ;
           in
-          # TODO: Try to split the user_exists declaration across lines
           ''
             set +e
 
@@ -427,7 +426,13 @@ in
             ${shellScripts.setUpCredentials}
 
             ${concatMapStringsSep "\n" (module: ''
-              user_exists=$(http ${optionalQuiet} --ignore-stdin --auth "$user:$password" GET "${apiUrl}/security/users" | jq '.[] | select(.userId == "${module.userId}")')
+              user_exists=$( \
+                http ${optionalQuiet} \
+                     --ignore-stdin \
+                     --auth "$user:$password" \
+                     GET "${apiUrl}/security/users" \
+                     | jq '.[] | select(.userId == "${module.userId}")' \
+              )
 
               if [ -z "$user_exists" ]
               then
