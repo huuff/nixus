@@ -404,9 +404,6 @@ in
             jq
           ];
 
-          # TODO: I removed the `--quiet` arg from http invocations
-          # to debug, but this might leak sensitive information...
-          # add a nexus option (`debug`) that allows easily enabling/disabling it
           # TODO: I'm inlining the JSON because the password needs special treatment (getting it in bash)
           # can't I just create one JSON with toJSON for the other properties and merge it dynamically (maybe with jq?)
           # with one JSON with only the password, got from bash?
