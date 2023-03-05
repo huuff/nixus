@@ -53,6 +53,8 @@ in
         diskSize = 5 * 1024;
       };
     };
+
+    # TODO: Test that the admin user is updated
     testScript = ''
         machine.wait_for_unit("multi-user.target")
 

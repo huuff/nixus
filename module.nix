@@ -389,7 +389,6 @@ in
 
         # TODO: Test
         # TODO: A better name, since it also updates users
-        # TODO: Update admin is breaking because no roles are provided? Kinda obvious, since I'm setting the roles in the "adminUser" but not in the users array
         create-nexus-users = {
           description = "Nexus users creation";
 
@@ -410,11 +409,11 @@ in
           script = 
           let
             # Append the nx-admin role to the admin user if it has no roles
-            adminUser = 
-              if adminUser.roles == []
-              then adminUser // { roles = ["nx-admin"]; }
-              else adminUser
-              ;
+            userModules = map (module: 
+              if module.userId == "admin" && module.roles == []
+              then module // { roles = ["nx-admin"]; }
+              else module
+            ) cfg.users;
           in
           ''
             set +e
@@ -480,7 +479,7 @@ in
               # Loading credentials again in case we just changed
               # the admin's
               ${shellScripts.setUpCredentials}
-            '') cfg.users}
+            '') userModules}
           '';
 
           serviceConfig = {
