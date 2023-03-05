@@ -420,7 +420,6 @@ in
               ;
           in
           # TODO: Try to split the user_exists declaration across lines
-          # TODO: Remove printing of user_exists
           ''
             set +e
 
@@ -429,7 +428,6 @@ in
 
             ${concatMapStringsSep "\n" (module: ''
               user_exists=$(http ${optionalQuiet} --ignore-stdin --auth "$user:$password" GET "${apiUrl}/security/users" | jq '.[] | select(.userId == "${module.userId}")')
-              echo "Value of user_exists $user_exists"
 
               if [ -z "$user_exists" ]
               then
