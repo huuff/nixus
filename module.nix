@@ -4,7 +4,6 @@
 with lib;
 
 # TODO: I'm not handling passwords changing yet.
-# TODO: Maybe add set +x, set -x only around scripts that need failing status codes?
 let
   cfg = config.xservices.nexus;
   apiUrl = "http://localhost:${toString cfg.listenPort}/service/rest/v1";
@@ -160,6 +159,7 @@ let
           ''
           else ''
             echo "No API user exists, the initial admin password file doesn't exist and the admin user is not provided in the nix configuration. This should never had happened and you should report this as an issue."
+            exit 1
           ''}
       fi
     '';
@@ -353,7 +353,6 @@ in
 
         # TODO: Test
         # TODO: Update them if they already exist
-        # TODO: Maybe re-enable set -e for the creation api calls
         create-nexus-roles = {
           description = "Nexus roles creation";
 
@@ -365,8 +364,6 @@ in
           path = [ pkgs.httpie ];
 
           script = ''
-            set +e
-
             ${shellScripts.exitIfNexusIsNotStarted}
             ${shellScripts.setUpCredentials}
 
@@ -416,14 +413,13 @@ in
             ) cfg.users;
           in
           ''
-            set +e
-
             ${shellScripts.exitIfNexusIsNotStarted}
             ${shellScripts.setUpCredentials}
 
             ${concatMapStringsSep "\n" (module: ''
               user_exists=$( \
                 http ${optionalQuiet} \
+                     --check-status \
                      --ignore-stdin \
                      --auth "$user:$password" \
                      GET "${apiUrl}/security/users" \
@@ -504,8 +500,6 @@ in
           # TODO: Also updating repositories if they already exist
           script = 
           ''
-          set +e
-
           ${shellScripts.setUpCredentials}
 
           ${concatMapStringsSep "\n" (module: ''
