@@ -55,6 +55,7 @@ in
     };
 
     # TODO: Test that the admin user is updated
+    # TODO: My JSON comparison fails... but why? I'll have to check it somehow (printing it?)
     testScript = ''
         #import json
 
