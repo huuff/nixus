@@ -73,8 +73,12 @@ in
         with subtest("creates roles"):
           # TODO: Test that the contents of the role match the expected
           # TODO: Ok, I'm getting the status and asserting it's ok, now try to assert the output with json
-          # TODO: Also try to split the httpie command across lines?
-          status, output = machine.execute("http --check-status --auth 'admin:${adminUser.password}' GET 'http://localhost:${toString listenPort}/service/rest/v1/security/roles/${testRole.id}'") 
+          status, output = machine.execute("""\
+            http \
+                 --check-status \
+                 --auth 'admin:${adminUser.password}' \
+                 GET 'http://localhost:${toString listenPort}/service/rest/v1/security/roles/${testRole.id}'
+            """) 
           assert status == 0
     '';
   }
