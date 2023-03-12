@@ -56,6 +56,8 @@ in
 
     # TODO: Test that the admin user is updated
     testScript = ''
+        #import json
+
         machine.wait_for_unit("multi-user.target")
 
         with subtest("main unit is active"):
@@ -71,14 +73,14 @@ in
           machine.succeed("http --check-status --auth 'admin:${adminUser.password}' GET 'http://localhost:${toString listenPort}/service/rest/v1/status/check'")
 
         with subtest("creates roles"):
-          # TODO: Test that the contents of the role match the expected
-          # TODO: Ok, I'm getting the status and asserting it's ok, now try to assert the output with json
           status, output = machine.execute("""\
             http \
                  --check-status \
+                 --print=b \
                  --auth 'admin:${adminUser.password}' \
                  GET 'http://localhost:${toString listenPort}/service/rest/v1/security/roles/${testRole.id}'
             """) 
           assert status == 0
+          #assert json.loads(output) == json.loads('${builtins.toJSON testRole}')
     '';
   }
