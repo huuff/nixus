@@ -55,9 +55,8 @@ in
     };
 
     # TODO: Test that the admin user is updated
-    # TODO: My JSON comparison fails... but why? I'll have to check it somehow (printing it?)
     testScript = ''
-        #import json
+        import json
 
         machine.wait_for_unit("multi-user.target")
 
@@ -82,6 +81,8 @@ in
                  GET 'http://localhost:${toString listenPort}/service/rest/v1/security/roles/${testRole.id}'
             """) 
           assert status == 0
-          #assert json.loads(output) == json.loads('${builtins.toJSON testRole}')
+          # We also append the source, since the API response
+          # adds that, even though the request doesn't
+          assert json.loads(output) == json.loads("""${builtins.toJSON (testRole // { source = "default"; })}""")
     '';
   }
