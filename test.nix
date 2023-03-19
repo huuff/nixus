@@ -54,9 +54,14 @@ in
       };
     };
 
+    extraPythonPackages = p: [ p.pyhamcrest ];
+    # XXX: pyhamcrest has no types, so mypy typecheck fails
+    skipTypeCheck = true;
+
     # TODO: Test that the admin user is updated
     testScript = ''
         import json
+        from hamcrest import assert_that, equal_to
 
         machine.wait_for_unit("multi-user.target")
 
@@ -73,6 +78,7 @@ in
           machine.succeed("http --check-status --auth 'admin:${adminUser.password}' GET 'http://localhost:${toString listenPort}/service/rest/v1/status/check'")
 
         with subtest("creates roles"):
+          # Act
           status, output = machine.execute("""\
             http \
                  --check-status \
@@ -80,9 +86,15 @@ in
                  --auth 'admin:${adminUser.password}' \
                  GET 'http://localhost:${toString listenPort}/service/rest/v1/security/roles/${testRole.id}'
             """) 
-          assert status == 0
+
+          # Assert
+          assert_that(status, equal_to(0))
+
           # We also append the source, since the API response
-          # adds that, even though the request doesn't
-          assert json.loads(output) == json.loads("""${builtins.toJSON (testRole // { source = "default"; })}""")
+          # adds that, even though the request doesn't have it
+          expected = json.loads("""${builtins.toJSON (testRole // { source = "default"; })}""")
+          actual = json.loads(output)
+
+          assert_that(actual, equal_to(expected))
     '';
   }
