@@ -418,7 +418,7 @@ in
 
             ${concatMapStringsSep "\n" (module: ''
               user_exists=$( \
-                http ${optionalQuiet} \
+                http --print=b \
                      --check-status \
                      --ignore-stdin \
                      --auth "$user:$password" \

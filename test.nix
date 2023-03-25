@@ -2,15 +2,22 @@
 let
   listenPort = 8081;
   nexusHomeDir = "/var/lib/sonatype-work";
-  adminUser = {
-    password = "adminpassword";
-  };
+  adminPassword = "adminpassword";
   testRole = {
     id = "test-role";
     name = "test-role";
     description = "Role to test";
     privileges = [ "nx-metrics-all" ];
     roles = [];
+  };
+  adminUser = {
+    userId = "admin";
+    firstName = "Administrator";
+    lastName = "User";
+    # The email address is changed from the default, so we can test
+    # whether the admin user is updated
+    emailAddress = "admin@nixtest.org";
+    passwordFile = pkgs.writeText "admin.password" adminPassword;
   };
 in
   pkgs.nixosTest {
@@ -25,6 +32,7 @@ in
 
       environment.systemPackages = with pkgs; [
         httpie # To run tests against the API
+        jq # To process json inside the machine
       ];
 
       xservices = {
@@ -37,13 +45,7 @@ in
           roles = [ testRole ];
 
           users = [
-            {
-              userId = "admin";
-              firstName = "Administrator";
-              lastName = "User";
-              emailAddress = "admin@example.org";
-              passwordFile = pkgs.writeText "admin.password" adminUser.password;
-            }
+            adminUser
           ];
         };
       };
@@ -58,8 +60,11 @@ in
     # XXX: pyhamcrest has no types, so mypy typecheck fails
     skipTypeCheck = true;
 
-    # TODO: Test that the admin user is updated
-    testScript = ''
+    testScript = 
+    let
+      baseUrl = "http://localhost:${toString listenPort}/service/rest/v1";
+    in
+    ''
         import json
         from hamcrest import assert_that, equal_to
 
@@ -75,19 +80,17 @@ in
           machine.wait_until_succeeds("systemctl is-active create-nexus-users", 100)
 
         with subtest("admin password is set"):
-          machine.succeed("http --check-status --auth 'admin:${adminUser.password}' GET 'http://localhost:${toString listenPort}/service/rest/v1/status/check'")
+          machine.succeed("http --check-status --auth 'admin:${adminPassword}' GET 'http://localhost:${toString listenPort}/service/rest/v1/status/check'")
 
         with subtest("creates roles"):
-          # Act
           status, output = machine.execute("""\
             http \
                  --check-status \
                  --print=b \
-                 --auth 'admin:${adminUser.password}' \
-                 GET 'http://localhost:${toString listenPort}/service/rest/v1/security/roles/${testRole.id}'
+                 --auth 'admin:${adminPassword}' \
+                 GET '${baseUrl}/security/roles/${testRole.id}'
             """) 
 
-          # Assert
           assert_that(status, equal_to(0))
 
           # We also append the source, since the API response
@@ -96,5 +99,18 @@ in
           actual = json.loads(output)
 
           assert_that(actual, equal_to(expected))
+
+        # TODO: The test isn't finished! Actually check that it's updated!
+        with subtest("admin user is updated"):
+          status, output = machine.execute("""\
+            http \
+                --check-status \
+                --print=b \
+                --auth 'admin:${adminPassword}' \
+                GET '${baseUrl}/security/users' \
+                | jq '.[] | select(.userId == "${adminUser.userId}")'
+          """)
+
+          assert_that(status, equal_to(0))
     '';
   }
