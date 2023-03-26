@@ -18,6 +18,7 @@ let
     # whether the admin user is updated
     emailAddress = "admin@nixtest.org";
     passwordFile = pkgs.writeText "admin.password" adminPassword;
+    roles = [ "nx-admin"];
   };
 in
   pkgs.nixosTest {
@@ -95,12 +96,12 @@ in
 
           # We also append the source, since the API response
           # adds that, even though the request doesn't have it
+          # TODO: Or maybe I could inline the json as I do below?
           expected = json.loads("""${builtins.toJSON (testRole // { source = "default"; })}""")
           actual = json.loads(output)
 
           assert_that(actual, equal_to(expected))
 
-        # TODO: The test isn't finished! Actually check that it's updated!
         with subtest("admin user is updated"):
           status, output = machine.execute("""\
             http \
@@ -112,5 +113,18 @@ in
           """)
 
           assert_that(status, equal_to(0))
+          assert_that(json.loads(output), equal_to(json.loads("""
+            {
+              "userId": "admin",
+              "firstName": "Administrator",
+              "lastName": "User",
+              "emailAddress": "admin@nixtest.org",
+              "source": "default",
+              "status": "active",
+              "readOnly": false,
+              "roles": [ "nx-admin" ],
+              "externalRoles": []
+            }
+          """)))
     '';
   }
