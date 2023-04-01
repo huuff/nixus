@@ -93,14 +93,16 @@ in
             """) 
 
           assert_that(status, equal_to(0))
-
-          # We also append the source, since the API response
-          # adds that, even though the request doesn't have it
-          # TODO: Or maybe I could inline the json as I do below?
-          expected = json.loads("""${builtins.toJSON (testRole // { source = "default"; })}""")
-          actual = json.loads(output)
-
-          assert_that(actual, equal_to(expected))
+          assert_that(json.loads(output), equal_to(json.loads("""
+            {
+              "id": "test-role",
+              "name": "test-role",
+              "description": "Role to test",
+              "privileges": [ "nx-metrics-all" ],
+              "roles": [],
+              "source": "default"
+            }
+          """)))
 
         with subtest("admin user is updated"):
           status, output = machine.execute("""\
