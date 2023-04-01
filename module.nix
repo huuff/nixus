@@ -400,9 +400,6 @@ in
             jq
           ];
 
-          # TODO: I'm inlining the JSON because the password needs special treatment (getting it in bash)
-          # can't I just create one JSON with toJSON for the other properties and merge it dynamically (maybe with jq?)
-          # with one JSON with only the password, got from bash?
           script = 
           let
             # Append the nx-admin role to the admin user if it has no roles
@@ -411,6 +408,11 @@ in
               then module // { roles = ["nx-admin"]; }
               else module
             ) cfg.users;
+            # Append the source and a command that retrieves the password
+            makeModuleRequest = module: builtins.toJSON ({
+              source = "default";
+              password = ''$(cat "${toString module.passwordFile}")'';
+            } // (builtins.removeAttrs module [ "passwordFile" ]));
           in
           ''
             ${shellScripts.exitIfNexusIsNotStarted}
@@ -432,38 +434,13 @@ in
                 http ${optionalQuiet} \
                      --check-status \
                      --auth "$user:$password" \
-                     POST "${apiUrl}/security/users" <<EOF
-                  {
-                    "userId": "${module.userId}",
-                    "firstName": "${module.firstName}",
-                    "lastName": "${module.lastName}",
-                    "emailAddress": "${module.emailAddress}",
-                    "status": "${module.status}",
-                    "password": "$(cat "${toString module.passwordFile}")",
-                    "roles": [
-                      ${concatMapStringsSep "," (role: ''"${role}"'') module.roles}
-                    ]
-                  }
-              EOF
+                     POST "${apiUrl}/security/users" <<< '${makeModuleRequest module}'
               else
                 echo "Updating user ${module.userId}"
                 http ${optionalQuiet} \
                      --check-status \
                      --auth "$user:$password" \
-                        PUT "${apiUrl}/security/users/${module.userId}" <<EOF
-                      {
-                        "userId": "${module.userId}",
-                        "firstName": "${module.firstName}",
-                        "lastName": "${module.lastName}",
-                        "emailAddress": "${module.emailAddress}",
-                        "status": "${module.status}",
-                        "source": "default",
-                        "password": "$(cat "${toString module.passwordFile}")",
-                        "roles": [
-                          ${concatMapStringsSep "," (role: ''"${role}"'') module.roles}
-                        ]
-                      }
-              EOF
+                        PUT "${apiUrl}/security/users/${module.userId}" <<< '${makeModuleRequest module}'
                 echo "Updating password for user ${module.userId}"
                 http ${optionalQuiet} \
                       --check-status \
@@ -496,7 +473,7 @@ in
           path = [ pkgs.httpie ];
 
           # TODO: Test
-          # TODO: This should get activated when create-nexus-api-user gets activated, but currently it fails (I'm starting it manually in the demo container)
+          # TODO: This should get activated when create-nexus-users gets activated, but currently it fails (I'm starting it manually in the demo container)
           # TODO: Also updating repositories if they already exist
           script = 
           ''
