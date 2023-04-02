@@ -4,6 +4,10 @@
 with lib;
 
 # TODO: I'm not handling passwords changing yet.
+# TODO: I'm not using the right users for services right?
+# TODO: Units are always started one after the other even if any
+# of them fails. I should find some way to only start the next unit
+# after the previous one succeeds (bindsTo?)
 let
   cfg = config.xservices.nexus;
   apiUrl = "http://localhost:${toString cfg.listenPort}/service/rest/v1";
@@ -389,9 +393,8 @@ in
         create-nexus-users = {
           description = "Nexus users creation";
 
-          wantedBy = [ "multi-user.target" ];
+          wantedBy = [ "multi-user.target"];
 
-          # TODO: Maybe use `requires`?
           partOf = [ "create-nexus-roles.service"];
           after = [ "create-nexus-roles.service"];
 
@@ -466,26 +469,25 @@ in
         configure-maven-repositories = {
           description = "Configure Maven repositories";
 
-          wantedBy = [ "multi-user.target"];
-          requires = [ "create-nexus-users.service"];
-          after = [ "create-nexus-users.service"];
+          wantedBy = [ "multi-user.target" ];
 
           path = [ pkgs.httpie ];
 
           # TODO: Test
-          # TODO: This should get activated when create-nexus-users gets activated, but currently it fails (I'm starting it manually in the demo container)
           # TODO: Also updating repositories if they already exist
           script = 
           ''
+          ${shellScripts.exitIfNexusIsNotStarted}
           ${shellScripts.setUpCredentials}
 
           ${concatMapStringsSep "\n" (module: ''
+              set +e
               http ${optionalQuiet} \
                    --check-status \
                    --auth "$user:$password" \
                    GET "${apiUrl}/repositories/maven/hosted/${module.name}"
-
               return_code="$?"
+              set -e
 
               if [ "$return_code" -eq 4 ]; then
               http ${optionalQuiet} \
@@ -513,11 +515,17 @@ in
           '') cfg.hostedRepositories.maven}
           '';
 
-          serviceConfig = {
+        serviceConfig = {
           Restart = "on-failure";
           RestartSec = 15;
           Type = "oneshot";
           RemainAfterExit = true;
+        };
+
+        # TODO: Configure all units with unitConfig like this one
+        unitConfig = {
+          PartOf = [ "create-nexus-users.service" ];
+          After = [ "create-nexus-users.service" ];
         };
       };
     };

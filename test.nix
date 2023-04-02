@@ -48,6 +48,14 @@ in
           users = [
             adminUser
           ];
+
+          hostedRepositories = {
+            maven = [
+              {
+                name = "maven-test-repo";
+              }
+            ];
+          };
         };
       };
 
@@ -128,5 +136,8 @@ in
               "externalRoles": []
             }
           """)))
+
+          with subtest("maven repositories"):
+            machine.wait_until_succeeds("systemctl is-active configure-maven-repositories", 100)
     '';
   }
