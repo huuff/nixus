@@ -3,6 +3,7 @@ let
   listenPort = 8081;
   nexusHomeDir = "/var/lib/sonatype-work";
   adminPassword = "adminpassword";
+  mavenRepositoryName = "test-maven-repository";
   testRole = {
     id = "test-role";
     name = "test-role";
@@ -52,7 +53,7 @@ in
           hostedRepositories = {
             maven = [
               {
-                name = "maven-test-repo";
+                name = mavenRepositoryName;
               }
             ];
           };
@@ -139,5 +140,37 @@ in
 
           with subtest("maven repositories"):
             machine.wait_until_succeeds("systemctl is-active configure-maven-repositories", 100)
+            status, output = machine.execute("""\
+              http \
+                --check-status \
+                --print=b \
+                --auth 'admin:${adminPassword}' \
+                GET '${baseUrl}/repositories/maven/hosted/${mavenRepositoryName}'
+            """)
+
+            assert_that(status, equal_to(0))
+            assert_that(json.loads(output), equal_to(json.loads("""
+              {
+                "name": "${mavenRepositoryName}",
+                "online": true,
+                "url": "http://localhost:8081/repository/${mavenRepositoryName}",
+                "storage": {
+                  "blobStoreName": "default",
+                  "strictContentTypeValidation": true,
+                  "writePolicy": "ALLOW"
+                },
+                "cleanup": null,
+                "maven": {
+                  "versionPolicy": "MIXED",
+                  "layoutPolicy": "STRICT",
+                  "contentDisposition": "INLINE"
+                },
+                "component": {
+                  "proprietaryComponents": false
+                },
+                "format": "maven2",
+                "type": "hosted"
+              }
+            """)))
     '';
   }

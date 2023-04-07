@@ -473,8 +473,8 @@ in
 
           path = [ pkgs.httpie ];
 
-          # TODO: Test
           # TODO: Also updating repositories if they already exist
+          # TODO: Try to do this with a toJSON
           script = 
           ''
           ${shellScripts.exitIfNexusIsNotStarted}
