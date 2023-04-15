@@ -4,7 +4,6 @@
 with lib;
 
 # TODO: I'm not handling passwords changing yet.
-# TODO: I'm not using the right users for services right?
 # TODO: Units are always started one after the other even if any
 # of them fails. I should find some way to only start the next unit
 # after the previous one succeeds (bindsTo?)
@@ -383,6 +382,8 @@ in
           serviceConfig = {
             Restart = "on-failure";
             RestartSec = 15;
+            User = cfg.user;
+            Group = cfg.group;
             Type = "oneshot";
             RemainAfterExit = true;
           };
@@ -461,6 +462,8 @@ in
           serviceConfig = {
             Restart = "on-failure";
             RestartSec = 15;
+            User = cfg.user;
+            Group = cfg.group;
             Type = "oneshot";
             RemainAfterExit = true;
           };
@@ -518,6 +521,8 @@ in
         serviceConfig = {
           Restart = "on-failure";
           RestartSec = 15;
+          User = cfg.user;
+          Group = cfg.group;
           Type = "oneshot";
           RemainAfterExit = true;
         };
