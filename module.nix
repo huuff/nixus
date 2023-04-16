@@ -477,7 +477,6 @@ in
           path = [ pkgs.httpie ];
 
           # TODO: Also updating repositories if they already exist
-          # TODO: Try to do this with a toJSON
           script = 
           ''
           ${shellScripts.exitIfNexusIsNotStarted}
@@ -496,22 +495,7 @@ in
               http ${optionalQuiet} \
                    --check-status \
                    --auth "$user:$password" \
-                   POST "${apiUrl}/repositories/maven/hosted/" <<EOF
-                {
-                  "name": "${module.name}",
-                  "online": ${toString module.online},
-                  "storage": {
-                    "blobStoreName": "${module.storage.blobStoreName}",
-                    "writePolicy": "${module.storage.writePolicy}",
-                    "strictContentTypeValidation": ${toString module.storage.strictContentTypeValidation}
-                  },
-                  "maven": {
-                    "contentDisposition": "${module.maven.contentDisposition}",
-                    "versionPolicy": "${module.maven.versionPolicy}",
-                    "layoutPolicy": "${module.maven.layoutPolicy}"
-                  }
-                }
-              EOF
+                   POST "${apiUrl}/repositories/maven/hosted/" <<< '${builtins.toJSON module}'
               else
                 echo "Repository ${module.name} already exists, skipping unit"
               fi
